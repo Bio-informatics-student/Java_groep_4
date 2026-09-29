@@ -9,14 +9,20 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * This test class checks whether supported input files are recognized correctly, mixed file types can be handled,
+ * FastQC output is detected, unsupported files are ignored and invalid folders cause an exception.
+ */
+
+
 public class InputHandlerTest {
 
-    /*** TempDir creates a temporary map for the tests */
+    /* TempDir creates a temporary directory to create temporary test files */
     @TempDir
     Path tempDir;
 
-    /*** IOException handles errors and makes the test fail when it occurs.
-     * It could occur with reading or writing a file. */
+    /* IOException can occur when reading or writing files.
+    If it occurs during the test, the test will fail immediately. */
     @Test
     void recognizesFastqFiles() throws IOException {
         Files.createFile(tempDir.resolve("sample1.fastq"));
@@ -24,7 +30,7 @@ public class InputHandlerTest {
 
         InputHandler inputHandler = new InputHandler();
 
-        inputHandler.readFolder(tempDir.toString());
+        inputHandler.scanFolder(tempDir.toString());
 
         assertEquals(2, inputHandler.getFastqFiles().size());
     }
@@ -35,7 +41,7 @@ public class InputHandlerTest {
 
         InputHandler inputHandler = new InputHandler();
 
-        inputHandler.readFolder(tempDir.toString());
+        inputHandler.scanFolder(tempDir.toString());
 
         assertEquals(1, inputHandler.getSamFiles().size());
 
@@ -47,24 +53,66 @@ public class InputHandlerTest {
 
         InputHandler inputHandler = new InputHandler();
 
-        inputHandler.readFolder(tempDir.toString());
+        inputHandler.scanFolder(tempDir.toString());
 
         assertEquals(1, inputHandler.getBamFiles().size());
 
     }
 
     @Test
-    void recognizeMixedFiles() throws IOException {
+    void recognizesMixedFiles() throws IOException {
         Files.createFile(tempDir.resolve("sample1.fastq"));
         Files.createFile(tempDir.resolve("sample2.sam"));
         Files.createFile(tempDir.resolve("sample3.bam"));
 
         InputHandler inputHandler = new InputHandler();
 
-        inputHandler.readFolder(tempDir.toString());
+        inputHandler.scanFolder(tempDir.toString());
 
         assertEquals(1, inputHandler.getFastqFiles().size());
         assertEquals(1, inputHandler.getSamFiles().size());
         assertEquals(1, inputHandler.getBamFiles().size());
+    }
+
+    @Test
+    void recognizesFastQcFolder() throws IOException {
+        Path fastqcFolder = Files.createDirectory(
+                tempDir.resolve("sample_fastqc")
+        );
+
+        Files.createFile(
+                fastqcFolder.resolve("fastqc_data.txt")
+        );
+
+        InputHandler inputHandler = new InputHandler();
+
+        inputHandler.scanFolder(tempDir.toString());
+
+        assertEquals(1, inputHandler.getFastqcFiles().size());
+    }
+
+    @Test
+    void ignoresUnsupportedFiles() throws IOException {
+        Files.createFile(tempDir.resolve("notes.txt"));
+        Files.createFile(tempDir.resolve("image.jpg"));
+
+        InputHandler inputHandler = new InputHandler();
+
+        inputHandler.scanFolder(tempDir.toString());
+
+        assertEquals(0, inputHandler.getFastqFiles().size());
+        assertEquals(0, inputHandler.getSamFiles().size());
+        assertEquals(0, inputHandler.getBamFiles().size());
+        assertEquals(0, inputHandler.getFastqcFiles().size());
+    }
+
+    @Test
+    void throwsExceptionForInvalidFolder() {
+        InputHandler inputHandler = new InputHandler();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> inputHandler.scanFolder("Folder does not exist")
+        );
     }
 }
