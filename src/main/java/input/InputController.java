@@ -15,6 +15,7 @@ public class InputController {
     private final SamReader samReader;
     private final BamReader bamReader;
     private final FastQCReader fastQCReader;
+    private final DataHandler dataHandler;
 
 
     /**
@@ -26,11 +27,13 @@ public class InputController {
         this.samReader = new SamReader();
         this.bamReader = new BamReader();
         this.fastQCReader = new FastQCReader();
+        this.dataHandler = new DataHandler();
     }
 
 
     /**
-     * Scans the selected folder and sends each detected file to the correct reader.
+     * Scans the selected folder, sends each detected file to the correct reader
+     * and passes tbe returned data to the DataHandler.
      *
      * @param folderPath path to the folder selected by the user
      * @throws IOException if an error occurs while accessing or reading input files
@@ -39,7 +42,8 @@ public class InputController {
         inputHandler.scanFolder(folderPath);
 
         for (Path file : inputHandler.getFastqFiles()) {
-            fastQReader.read(file);
+            List<String[]> fastqData = fastQReader.read(file);
+            dataHandler.handleFastqData(fastqData);
         }
 
         for (Path file : inputHandler.getSamFiles()) {
