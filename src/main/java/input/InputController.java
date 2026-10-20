@@ -2,6 +2,7 @@ package input;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Controls the flow of input files after they have been categorized.
@@ -47,15 +48,18 @@ public class InputController {
         }
 
         for (Path file : inputHandler.getSamFiles()) {
-            samReader.read(file);
+            List<String[]> samData = samReader.read(file);
+            dataHandler.handleSamData(samData);
         }
 
         for (Path file : inputHandler.getBamFiles()) {
-            bamReader.read(file);
+            List<String[]> bamData = bamReader.read(file);
+            dataHandler.handleBamData(bamData);
         }
 
         for (Path file : inputHandler.getFastqcFiles()) {
-            fastQCReader.read(file);
+            List<String[]> fastQCData = fastQCReader.read(file);
+            dataHandler.handleFastQCData(fastQCData);
         }
     }
 }
