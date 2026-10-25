@@ -18,7 +18,7 @@ public class OutputWriter {
      */
     public void printToTerminal(List<QCResult> results) {
         System.out.println(
-                "Sample\tType\tBegin kwaliteit\tEind kwaliteit\tDuplicaten\tEindstatus"
+                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tFinal Status"
         );
 
         for (QCResult result : results) {

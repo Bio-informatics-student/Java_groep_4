@@ -1,14 +1,16 @@
 
+import input.InputController;
+import output.OutputWriter;
+import output.QCResult;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Stream;
 
 /**
  * Main entry point for the sequencing QC tool.
@@ -17,27 +19,57 @@ import java.util.stream.Stream;
 @Command(
         name = "qc-tool",
         description = "Performs quality control on sequencing data.",
-        // Automatically provides --help and --version options.
         mixinStandardHelpOptions = true
 )
 public class Main implements Runnable {
 
-    // Path to the input file or directory provided by the user.
+    // Path to the input FASTQ file or directory.
     @Option(
             names = {"-i", "--input"},
-            description = "Input file or folder",
+            description = "Input FASTQ file or folder",
             required = true
     )
     private Path input;
 
     // Path where the QC results will be written.
-    // Defaults to results.tsv if the user does not specify an output path.
     @Option(
             names = {"-o", "--output"},
-            description = "Output file",
+            description = "Output file (default: ${DEFAULT-VALUE})",
             defaultValue = "results.tsv"
     )
     private Path output;
+
+    // Percentage of each read end to analyse.
+    @Option(
+            names = "--end-percent",
+            description = "Percentage of bases to analyse at each read end (1-50; default: ${DEFAULT-VALUE})",
+            defaultValue = "10"
+    )
+    private double endPercent;
+
+    // Minimum percentage of reads that must pass the quality checks.
+    @Option(
+            names = "--required-reads-percent",
+            description = "Minimum percentage of reads that must pass the quality checks (0-100; default: ${DEFAULT-VALUE})",
+            defaultValue = "80"
+    )
+    private double requiredReadsPercent;
+
+    // Maximum percentage of duplicate reads allowed.
+    @Option(
+            names = "--max-duplicate-percent",
+            description = "Maximum allowed percentage of duplicate reads (0-100; default: ${DEFAULT-VALUE})",
+            defaultValue = "100"
+    )
+    private double maxDuplicatePercent;
+
+    // Minimum Phred quality score required for a base to pass.
+    @Option(
+            names = "--min-quality-score",
+            description = "Minimum Phred quality score for a base to pass (default: ${DEFAULT-VALUE})",
+            defaultValue = "30"
+    )
+    private int minQualityScore;
 
     /**
      * Executes after PicoCLI has parsed the command-line arguments.
@@ -60,19 +92,18 @@ public class Main implements Runnable {
             );
         }
 
-        // Validate the output path.
-        // The output file itself does not need to exist yet.
-        Path outputParent = output.toAbsolutePath().getParent();
+        // Resolve the output path and its parent directory.
+        Path absoluteOutput = output.toAbsolutePath();
+        Path outputParent = absoluteOutput.getParent();
 
         // An existing directory cannot be used as the output file.
-        if (Files.exists(output) && Files.isDirectory(output)) {
+        if (Files.exists(absoluteOutput) && Files.isDirectory(absoluteOutput)) {
             throw new IllegalArgumentException(
                     "Output path points to a directory, not a file: " + output
             );
         }
 
         // Create the output directory if it does not exist.
-        // This allows the user to specify a new directory for the results.
         try {
             if (outputParent != null) {
                 Files.createDirectories(outputParent);
@@ -83,114 +114,81 @@ public class Main implements Runnable {
             );
         }
 
+        // Validate the quality and duplicate thresholds.
+        if (!Double.isFinite(endPercent)
+                || endPercent < 1 || endPercent > 50) {
+            throw new IllegalArgumentException(
+                    "--end-percent must be between 1 and 50."
+            );
+        }
+
+        if (!Double.isFinite(requiredReadsPercent)
+                || requiredReadsPercent < 0 || requiredReadsPercent > 100) {
+            throw new IllegalArgumentException(
+                    "--required-reads-percent must be between 0 and 100."
+            );
+        }
+
+        if (!Double.isFinite(maxDuplicatePercent)
+                || maxDuplicatePercent < 0 || maxDuplicatePercent > 100) {
+            throw new IllegalArgumentException(
+                    "--max-duplicate-percent must be between 0 and 100."
+            );
+        }
+
+        if (minQualityScore < 0 || minQualityScore > 93) {
+            throw new IllegalArgumentException(
+                    "--min-quality-score must be between 0 and 93."
+            );
+        }
+
         System.out.println("Input validated: " + input);
-        System.out.println("Output file: " + output);
+        System.out.println("Output file: " + absoluteOutput);
 
-        // Find input files with supported file extensions.
+        System.out.printf(
+                Locale.ROOT,
+                "Minimum Phred score: Q%d | Read-end region: %.1f%% | "
+                        + "Required passing reads: %.1f%% | "
+                        + "Maximum duplicates: %.1f%%%n",
+                minQualityScore,
+                endPercent,
+                requiredReadsPercent,
+                maxDuplicatePercent
+        );
+
+        // Run the FASTQ processing pipeline.
         try {
-            List<Path> inputFiles;
+            InputController controller = new InputController();
 
-            if (Files.isRegularFile(input)) {
-                // When a single file is provided, check that file directly.
-                if (isSupportedFile(input)) {
-                    inputFiles = List.of(input);
-                } else {
-                    inputFiles = List.of();
-                }
-            } else {
-                // When a directory is provided, inspect its immediate contents.
-                try (Stream<Path> paths = Files.list(input)) {
-                    inputFiles = paths
-                            .filter(Files::isRegularFile)
-                            .filter(Main::isSupportedFile)
-                            .toList();
-                }
-            }
+            List<QCResult> results = controller.handleInput(
+                    input,
+                    endPercent,
+                    requiredReadsPercent,
+                    maxDuplicatePercent,
+                    minQualityScore
+            );
 
-            // Stop if no supported files were found.
-            if (inputFiles.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "No supported input files were found. "
-                                + "Expected a supported SAM, BAM, FASTQ or FastQC file."
-                );
-            }
+            // Display the QC results in the terminal.
+            OutputWriter writer = new OutputWriter();
+            writer.printToTerminal(results);
 
-            // Display how many files were recognized.
-            System.out.println("Recognized input files: " + inputFiles.size());
+            // Write the QC results to the output file.
+            writer.writeToFile(results, absoluteOutput);
 
-            // Display each recognized file and its detected type.
-            for (Path file : inputFiles) {
-                String fileType = getFileType(file);
-
-                System.out.println(
-                        "Found: " + file.getFileName()
-                                + " (type: " + fileType + ")"
-                );
-            }
-
-            // TODO: Connect the processing pipeline.
-
+            System.out.println();
             System.out.println(
-                    "Input validation completed. QC processing is not connected yet."
+                    "QC processing completed. Results written to: "
+                            + absoluteOutput
             );
 
         } catch (IOException e) {
-            // Convert file access errors into a readable error message.
+            // Display file access and processing errors clearly.
             throw new IllegalStateException(
-                    "Could not read the input directory: " + input, e
+                    "Could not process input: " + input + ". "
+                            + e.getMessage(),
+                    e
             );
         }
-    }
-
-    /**
-     * Checks whether a file has an extension supported by the tool.
-     *
-     * @param file the file to check
-     * @return true if the file extension is supported
-     */
-    private static boolean isSupportedFile(Path file) {
-        // Use lowercase to make extension checks case-insensitive.
-        String name = file.getFileName()
-                .toString()
-                .toLowerCase(Locale.ROOT);
-
-        return name.endsWith(".bam")
-                || name.endsWith(".sam")
-                || name.endsWith(".fastq")
-                || name.endsWith(".fq")
-                || name.endsWith(".fastq.gz")
-                || name.endsWith(".fq.gz")
-                || name.endsWith("_fastqc.html")
-                || name.endsWith("_fastqc.zip");
-    }
-
-    /**
-     * Determines the file type from its extension.
-     *
-     * @param file the file to identify
-     * @return the detected file type
-     */
-    private static String getFileType(Path file) {
-        String name = file.getFileName()
-                .toString()
-                .toLowerCase(Locale.ROOT);
-
-        if (name.endsWith(".bam")) {
-            return "BAM";
-        } else if (name.endsWith(".sam")) {
-            return "SAM";
-        } else if (name.endsWith(".fastq")
-                || name.endsWith(".fq")
-                || name.endsWith(".fastq.gz")
-                || name.endsWith(".fq.gz")) {
-            return "FASTQ";
-        } else if (name.endsWith("_fastqc.html")) {
-            return "FastQC HTML";
-        } else if (name.endsWith("_fastqc.zip")) {
-            return "FastQC ZIP";
-        }
-
-        return "UNKNOWN ERROR";
     }
 
     /**
@@ -201,19 +199,16 @@ public class Main implements Runnable {
     public static void main(String[] args) {
         CommandLine commandLine = new CommandLine(new Main());
 
-        // Show error messages instead of a full Java stack trace.
+        // Show readable error messages instead of full stack traces.
         commandLine.setExecutionExceptionHandler(
                 (exception, cmd, parseResult) -> {
-                    cmd.getErr().println(
-                            "ERROR: " + exception.getMessage()
-                    );
-                    return 1; // A non-zero exit code indicates an error.
+                    cmd.getErr().println("ERROR: " + exception.getMessage());
+                    return 1;
                 }
         );
 
         // Parse the arguments and run the command.
         int exitCode = commandLine.execute(args);
-
         System.exit(exitCode);
     }
 }
