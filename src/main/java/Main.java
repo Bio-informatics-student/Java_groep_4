@@ -19,12 +19,11 @@ import java.util.Locale;
 @Command(
         name = "qc-tool",
         description = "Performs quality control on sequencing data.",
-        // Automatically provides --help and --version options.
         mixinStandardHelpOptions = true
 )
 public class Main implements Runnable {
 
-    // Path to the input file or directory provided by the user.
+    // Path to the input FASTQ file or directory.
     @Option(
             names = {"-i", "--input"},
             description = "Input FASTQ file or folder",
@@ -33,18 +32,17 @@ public class Main implements Runnable {
     private Path input;
 
     // Path where the QC results will be written.
-    // Defaults to results.tsv if the user does not specify an output path.
     @Option(
             names = {"-o", "--output"},
-            description = "Output file",
+            description = "Output file (default: ${DEFAULT-VALUE})",
             defaultValue = "results.tsv"
     )
     private Path output;
 
-    // Percentage of bases to analyse at each read end.
+    // Percentage of each read end to analyse.
     @Option(
             names = "--end-percent",
-            description = "Percentage of bases to analyse at each read end (1-50)",
+            description = "Percentage of bases to analyse at each read end (1-50; default: ${DEFAULT-VALUE})",
             defaultValue = "10"
     )
     private double endPercent;
@@ -52,18 +50,26 @@ public class Main implements Runnable {
     // Minimum percentage of reads that must pass the quality checks.
     @Option(
             names = "--required-reads-percent",
-            description = "Minimum percentage of reads that must pass the quality checks (0-100)",
+            description = "Minimum percentage of reads that must pass the quality checks (0-100; default: ${DEFAULT-VALUE})",
             defaultValue = "80"
     )
     private double requiredReadsPercent;
 
-    // Maximum percentage of duplicate reads allowed for a sample to pass.
+    // Maximum percentage of duplicate reads allowed.
     @Option(
             names = "--max-duplicate-percent",
-            description = "Maximum allowed percentage of duplicate reads (0-100)",
+            description = "Maximum allowed percentage of duplicate reads (0-100; default: ${DEFAULT-VALUE})",
             defaultValue = "100"
     )
     private double maxDuplicatePercent;
+
+    // Minimum Phred quality score required for a base to pass.
+    @Option(
+            names = "--min-quality-score",
+            description = "Minimum Phred quality score for a base to pass (default: ${DEFAULT-VALUE})",
+            defaultValue = "30"
+    )
+    private int minQualityScore;
 
     /**
      * Executes after PicoCLI has parsed the command-line arguments.
@@ -86,20 +92,18 @@ public class Main implements Runnable {
             );
         }
 
-        // Validate the output path.
-        // The output file itself does not need to exist yet.
+        // Resolve the output path and its parent directory.
         Path absoluteOutput = output.toAbsolutePath();
         Path outputParent = absoluteOutput.getParent();
 
         // An existing directory cannot be used as the output file.
-        if (Files.exists(output) && Files.isDirectory(output)) {
+        if (Files.exists(absoluteOutput) && Files.isDirectory(absoluteOutput)) {
             throw new IllegalArgumentException(
                     "Output path points to a directory, not a file: " + output
             );
         }
 
         // Create the output directory if it does not exist.
-        // This allows the user to specify a new directory for the results.
         try {
             if (outputParent != null) {
                 Files.createDirectories(outputParent);
@@ -132,12 +136,21 @@ public class Main implements Runnable {
             );
         }
 
+        if (minQualityScore < 0 || minQualityScore > 93) {
+            throw new IllegalArgumentException(
+                    "--min-quality-score must be between 0 and 93."
+            );
+        }
+
         System.out.println("Input validated: " + input);
         System.out.println("Output file: " + absoluteOutput);
 
         System.out.printf(
                 Locale.ROOT,
-                "Read-end region: %.1f%% | Required passing reads: %.1f%% | Maximum duplicates: %.1f%%%n",
+                "Minimum Phred score: Q%d | Read-end region: %.1f%% | "
+                        + "Required passing reads: %.1f%% | "
+                        + "Maximum duplicates: %.1f%%%n",
+                minQualityScore,
                 endPercent,
                 requiredReadsPercent,
                 maxDuplicatePercent
@@ -151,7 +164,8 @@ public class Main implements Runnable {
                     input,
                     endPercent,
                     requiredReadsPercent,
-                    maxDuplicatePercent
+                    maxDuplicatePercent,
+                    minQualityScore
             );
 
             // Display the QC results in the terminal.
@@ -168,7 +182,7 @@ public class Main implements Runnable {
             );
 
         } catch (IOException e) {
-            // Convert file access and processing errors into a readable message.
+            // Display file access and processing errors clearly.
             throw new IllegalStateException(
                     "Could not process input: " + input + ". "
                             + e.getMessage(),
@@ -185,19 +199,16 @@ public class Main implements Runnable {
     public static void main(String[] args) {
         CommandLine commandLine = new CommandLine(new Main());
 
-        // Show error messages instead of a full Java stack trace.
+        // Show readable error messages instead of full stack traces.
         commandLine.setExecutionExceptionHandler(
                 (exception, cmd, parseResult) -> {
-                    cmd.getErr().println(
-                            "ERROR: " + exception.getMessage()
-                    );
-                    return 1; // A non-zero exit code indicates an error.
+                    cmd.getErr().println("ERROR: " + exception.getMessage());
+                    return 1;
                 }
         );
 
         // Parse the arguments and run the command.
         int exitCode = commandLine.execute(args);
-
         System.exit(exitCode);
     }
 }

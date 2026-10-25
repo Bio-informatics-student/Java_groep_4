@@ -25,7 +25,7 @@ public class FastqQCProcessor {
     }
 
     /**
-     * Processes one FASTQ file and returns its QC results.
+     * Processes one FASTQ file using Q30 as the default minimum score.
      */
     public QCResult process(
             Path file,
@@ -33,12 +33,74 @@ public class FastqQCProcessor {
             double requiredPassingReadsPercent,
             double maximumDuplicatePercent
     ) throws IOException {
+        return process(
+                file,
+                endPercentage,
+                requiredPassingReadsPercent,
+                maximumDuplicatePercent,
+                30
+        );
+    }
+
+    /**
+     * Processes one FASTQ file using the specified minimum Phred score.
+     *
+     * Beginning Quality and Ending Quality represent the percentages
+     * of bases in the analysed read-end regions that meet the threshold.
+     *
+     * A read passes when at least 90% of the bases at both ends meet
+     * the selected minimum Phred score.
+     */
+    public QCResult process(
+            Path file,
+            double endPercentage,
+            double requiredPassingReadsPercent,
+            double maximumDuplicatePercent,
+            int minQualityScore
+    ) throws IOException {
+
+        // Validate the processing settings.
+        if (!Double.isFinite(endPercentage)
+                || endPercentage < 1 || endPercentage > 50) {
+            throw new IllegalArgumentException(
+                    "Read-end percentage must be between 1 and 50."
+            );
+        }
+
+        if (!Double.isFinite(requiredPassingReadsPercent)
+                || requiredPassingReadsPercent < 0
+                || requiredPassingReadsPercent > 100) {
+            throw new IllegalArgumentException(
+                    "Required passing-read percentage must be between 0 and 100."
+            );
+        }
+
+        if (!Double.isFinite(maximumDuplicatePercent)
+                || maximumDuplicatePercent < 0
+                || maximumDuplicatePercent > 100) {
+            throw new IllegalArgumentException(
+                    "Maximum duplicate percentage must be between 0 and 100."
+            );
+        }
+
+        if (minQualityScore < 0 || minQualityScore > 93) {
+            throw new IllegalArgumentException(
+                    "Minimum Phred score must be between 0 and 93."
+            );
+        }
 
         List<String[]> records = reader.read(file);
+
+        if (records.isEmpty()) {
+            throw new IOException(
+                    "No reads were found in FASTQ file: " + file
+            );
+        }
+
         List<String> sequences = new ArrayList<>(records.size());
 
-        long startQ30Bases = 0;
-        long endQ30Bases = 0;
+        long startPassingBases = 0;
+        long endPassingBases = 0;
         long totalStartBases = 0;
         long totalEndBases = 0;
 
@@ -54,7 +116,9 @@ public class FastqQCProcessor {
 
             try {
                 result = qualityAnalyzer.analyse(
-                        sequence, quality, endPercentage
+                        sequence,
+                        quality,
+                        endPercentage
                 );
             } catch (IllegalArgumentException e) {
                 throw new IOException(
@@ -66,45 +130,57 @@ public class FastqQCProcessor {
 
             int basesPerEnd = result.getBasesPerEnd();
 
-            // Count Q30+ bases at the beginning and end.
-            startQ30Bases += Math.round(
-                    result.getStart().getPercentageQ30()
-                            * basesPerEnd / 100.0
+            // Calculate the percentage of bases meeting the selected
+            // Phred threshold at the beginning and end of each read.
+            double startQualityPercent = calculatePercentageAtLeast(
+                    quality,
+                    0,
+                    basesPerEnd,
+                    minQualityScore
             );
 
-            endQ30Bases += Math.round(
-                    result.getEnd().getPercentageQ30()
-                            * basesPerEnd / 100.0
+            double endQualityPercent = calculatePercentageAtLeast(
+                    quality,
+                    quality.length() - basesPerEnd,
+                    quality.length(),
+                    minQualityScore
+            );
+
+            // Convert the percentages back to base counts for totals.
+            startPassingBases += Math.round(
+                    startQualityPercent * basesPerEnd / 100.0
+            );
+
+            endPassingBases += Math.round(
+                    endQualityPercent * basesPerEnd / 100.0
             );
 
             totalStartBases += basesPerEnd;
             totalEndBases += basesPerEnd;
 
-            // A read passes if at least 90% of bases at
-            // BOTH ends have Q30 or higher.
-            boolean startPasses =
-                    result.getStart().getPercentageQ30() >= 90.0;
-
-            boolean endPasses =
-                    result.getEnd().getPercentageQ30() >= 90.0;
+            // A read passes only when at least 90% of the bases
+            // at both ends meet the selected minimum Phred score.
+            boolean startPasses = startQualityPercent >= 90.0;
+            boolean endPasses = endQualityPercent >= 90.0;
 
             if (startPasses && endPasses) {
                 passingReads++;
             }
         }
 
+        // Calculate the overall percentages of bases passing the threshold.
         double beginningQuality =
-                100.0 * startQ30Bases / totalStartBases;
+                100.0 * startPassingBases / totalStartBases;
 
-        double endQuality =
-                100.0 * endQ30Bases / totalEndBases;
+        double endingQuality =
+                100.0 * endPassingBases / totalEndBases;
 
         // Exact sequence matches count as duplicates.
-        double duplicatePercent =
-                duplicateCalculator.calculateDuplicates(
-                        sequences.toArray(new String[0])
-                );
+        double duplicatePercent = duplicateCalculator.calculateDuplicates(
+                sequences.toArray(new String[0])
+        );
 
+        // Calculate the percentage of reads passing at both ends.
         double passingReadsPercent =
                 100.0 * passingReads / records.size();
 
@@ -122,9 +198,35 @@ public class FastqQCProcessor {
                 file.getFileName().toString(),
                 "FASTQ",
                 beginningQuality,
-                endQuality,
+                endingQuality,
                 duplicatePercent,
                 status
         );
+    }
+
+    /**
+     * Calculates the percentage of bases in a quality-string region
+     * that meet the specified minimum Phred score.
+     *
+     * FASTQ quality characters use Phred+33 encoding.
+     */
+    private double calculatePercentageAtLeast(
+            String quality,
+            int startIndex,
+            int endIndex,
+            int minQualityScore
+    ) {
+        int passingBases = 0;
+        int totalBases = endIndex - startIndex;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            int phredScore = quality.charAt(i) - 33;
+
+            if (phredScore >= minQualityScore) {
+                passingBases++;
+            }
+        }
+
+        return 100.0 * passingBases / totalBases;
     }
 }

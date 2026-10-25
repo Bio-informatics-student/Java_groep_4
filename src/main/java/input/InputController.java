@@ -31,7 +31,8 @@ public class InputController {
             Path input,
             double endPercentage,
             double requiredPassingReadsPercent,
-            double maximumDuplicatePercent
+            double maximumDuplicatePercent,
+            int minQualityScore
     ) throws IOException {
 
         List<Path> fastqFiles = new ArrayList<>();
@@ -63,7 +64,8 @@ public class InputController {
                             file,
                             endPercentage,
                             requiredPassingReadsPercent,
-                            maximumDuplicatePercent
+                            maximumDuplicatePercent,
+                            minQualityScore
                     )
             );
         }
