@@ -20,14 +20,15 @@ hide empty members
 class Main {
     - input : Path
     - output : Path
+    - endPercent : double
+    - requiredReadsPercent : double
+    - maxDuplicatePercent : double
+    - minQualityScore : int
     + run() : void
-    - {static} isSupportedFile(Path) : boolean
-    - {static} getFileType(Path) : String
     + {static} main(String[]) : void
 }
 
 interface Runnable
-
 Main ..|> Runnable
 
 ' =========================
@@ -38,8 +39,10 @@ package "input" #E8F4FD {
 
     class InputController {
         - inputHandler : InputHandler
+        - processor : FastqQCProcessor
         + InputController()
-        + handleInput(String) : void
+        + handleInput(Path, double, double, double, int) : List<QCResult>
+        - isFastq(Path) : boolean
     }
 
     class InputHandler {
@@ -55,7 +58,8 @@ package "input" #E8F4FD {
     }
 
     class FastQReader {
-        + read(Path) : Object
+        + read(Path) : List<String[]>
+        - openReader(Path) : BufferedReader
     }
 
     class SamReader {
@@ -77,8 +81,14 @@ package "input" #E8F4FD {
 
 package "processing" #EAF7EA {
 
-    class DataHandler {
-        + dataHandler(List<List<String>>, boolean) : Map<String, List<String>>
+    class FastqQCProcessor {
+        - reader : FastQReader
+        - qualityAnalyzer : AnalyseReadQuality
+        - duplicateCalculator : DuplicateCalculator
+        + FastqQCProcessor()
+        + process(Path, double, double, double) : QCResult
+        + process(Path, double, double, double, int) : QCResult
+        - calculatePercentageAtLeast(String, int, int, int) : double
     }
 
     class AnalyseReadQuality {
@@ -91,6 +101,10 @@ package "processing" #EAF7EA {
 
     class DuplicateCalculator {
         + calculateDuplicates(String[]) : double
+    }
+
+    class DataHandler {
+        + dataHandler(List<List<String>>, boolean) : Map<String, List<String>>
     }
 
     class QualityResult {
@@ -131,6 +145,7 @@ package "processing" #EAF7EA {
 }
 
 class RuntimeException
+InvalidReadException --|> RuntimeException
 
 ' =========================
 ' OUTPUT PACKAGE
@@ -163,34 +178,33 @@ package "output" #FFF2E2 {
 }
 
 ' =========================
-' UML RELATIES
+' RELATIONSHIPS
 ' =========================
 
-' Main
-Main ..> InputController : gebruikt
+' Main application flow
+Main ..> InputController : uses
+Main ..> OutputWriter : uses
 
-' Input
-InputController --> InputHandler : heeft
-InputController ..> FastQReader : gebruikt
-InputController ..> SamReader : gebruikt
-InputController ..> BamReader : gebruikt
-InputController ..> FastQCReader : gebruikt
-InputController ..> DataHandler : start processing
+' Input handling
+InputController --> InputHandler : has
+InputController --> FastqQCProcessor : has
+InputController ..> FastQReader : indirectly uses via processor
 
-' Processing pipeline
-DataHandler ..> AnalyseReadQuality : stuurt data door
-DataHandler ..> DuplicateCalculator : stuurt data door
+' FASTQ processing pipeline
+FastqQCProcessor --> FastQReader : reads FASTQ records
+FastqQCProcessor --> AnalyseReadQuality : analyses read ends
+FastqQCProcessor --> DuplicateCalculator : calculates duplicates
+FastqQCProcessor ..> QCResult : creates
 
-' Processing intern
+' Quality analysis
+AnalyseReadQuality ..> QualityResult : creates
+AnalyseReadQuality ..> EndQuality : creates
+QualityResult "1" *-- "2" EndQuality : start / end statistics
+
+' Legacy/general FASTQ validation helper; not used by current FastqQCProcessor flow
 DataHandler ..> InvalidReadException : throws
-AnalyseReadQuality ..> QualityResult : maakt
-AnalyseReadQuality ..> EndQuality : maakt
-QualityResult --> "2" EndQuality : start / end
 
 ' Output
-OutputWriter ..> QCResult : verwerkt
-
-' Overerving
-InvalidReadException --|> RuntimeException
+OutputWriter ..> QCResult : formats and writes
 
 @enduml
