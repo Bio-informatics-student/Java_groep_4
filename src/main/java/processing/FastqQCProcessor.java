@@ -18,6 +18,7 @@ public class FastqQCProcessor {
     private final AnalyseReadQuality qualityAnalyzer;
     private final DuplicateCalculator duplicateCalculator;
 
+    // Creates the reader and analysis components used for each FASTQ file.
     public FastqQCProcessor() {
         this.reader = new FastQReader();
         this.qualityAnalyzer = new AnalyseReadQuality();
@@ -89,6 +90,7 @@ public class FastqQCProcessor {
             );
         }
 
+        // Read and validate the FASTQ records before calculating QC statistics.
         List<String[]> records = reader.read(file);
 
         if (records.isEmpty()) {
@@ -97,6 +99,7 @@ public class FastqQCProcessor {
             );
         }
 
+        // Keep the sequences for duplicate calculation after the quality checks.
         List<String> sequences = new ArrayList<>(records.size());
 
         long startPassingBases = 0;
@@ -184,6 +187,8 @@ public class FastqQCProcessor {
         double passingReadsPercent =
                 100.0 * passingReads / records.size();
 
+        // The file passes only if both the read-quality requirement and
+        // the maximum duplicate percentage requirement pass.
         boolean qualityPasses =
                 passingReadsPercent >= requiredPassingReadsPercent;
 
