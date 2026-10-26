@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * OutputWriter writes QC results to the terminal
- * and to a text file.
+ * and a tsv-file
  */
 public class OutputWriter {
 
@@ -38,10 +38,11 @@ public class OutputWriter {
             Path outputFile
     ) throws IOException {
 
+        // Build one TSV table with a header and one row for each sample.
         StringBuilder output = new StringBuilder();
 
         output.append(
-                "Sample\tType\tBegin kwaliteit\tEind kwaliteit\tDuplicaten\tEindstatus\n"
+                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tFinal Status\n"
         );
 
         for (QCResult result : results) {

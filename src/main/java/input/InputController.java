@@ -19,13 +19,24 @@ public class InputController {
     private final InputHandler inputHandler;
     private final FastqQCProcessor processor;
 
+    // Creates the components needed to discover and process input files.
     public InputController() {
         this.inputHandler = new InputHandler();
         this.processor = new FastqQCProcessor();
     }
 
     /**
-     * Finds FASTQ files and processes each one.
+     * Finds FASTQ files in the supplied file or directory and processes each one.
+     * The results are collected into a list so they can be displayed and saved together.
+     *
+     * @param input FASTQ file or directory containing input files
+     * @param endPercentage percentage of each read end to analyse
+     * @param requiredPassingReadsPercent minimum percentage of reads that must pass
+     * @param maximumDuplicatePercent maximum allowed duplicate percentage
+     * @param minQualityScore minimum Phred score for a base to pass
+     * @return one QC result for each processed FASTQ file
+     * @throws IOException if an input file cannot be read
+     * @throws IllegalArgumentException if the input is invalid or no FASTQ files are found
      */
     public List<QCResult> handleInput(
             Path input,
@@ -73,6 +84,7 @@ public class InputController {
         return results;
     }
 
+    // Checks the supported filename extensions for FASTQ files.
     private boolean isFastq(Path file) {
         String name = file.getFileName()
                 .toString()
