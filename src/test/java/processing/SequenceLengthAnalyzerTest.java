@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class SequenceLengthAnalyzerTest {
 
@@ -39,5 +40,28 @@ public class SequenceLengthAnalyzerTest {
         );
 
         assertEquals(50.0, result);
+    }
+
+    @Test
+    public void testFilterByMinimumLength() {
+        SequenceLengthAnalyzer analyzer = new SequenceLengthAnalyzer();
+
+        String[] read1 = {"@read1", "AT", "+", "II"};
+        String[] read2 = {"@read2", "ATCG", "+", "IIII"};
+        String[] read3 = {"@read3", "ATCGAT", "+", "IIIIII"};
+        String[] read4 = {"@read4", "ATCGATCG", "+", "IIIIIIII"};
+
+        List<String[]> records = List.of(
+                read1,
+                read2,
+                read3,
+                read4
+        );
+
+        List<String[]> result = analyzer.filterByMinimumLength(records, 5);
+
+        assertEquals(2, result.size());
+        assertArrayEquals(read3, result.get(0));
+        assertArrayEquals(read4, result.get(1));
     }
 }

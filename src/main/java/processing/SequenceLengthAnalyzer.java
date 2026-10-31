@@ -1,5 +1,6 @@
 package processing;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -67,5 +68,30 @@ public class SequenceLengthAnalyzer {
         }
 
         return ((double) belowMinimum / sequences.size()) * 100;
+    }
+
+
+    /**
+     * Removes reads that are shorter than the minimum required sequence length given by the user.
+     *
+     * @param records FASTQ records (header, sequence, separator and quality)
+     * @param requiredMinimumLength minimum sequence length selected by the user
+     * @return FASTQ records that meet the required minimum length
+     */
+    public List<String[]> filterByMinimumLength(
+            List<String[]> records,
+            int requiredMinimumLength
+    ) {
+        List<String[]> filteredRecords = new ArrayList<>();
+
+        for (String[] record : records) {
+            String sequence = record[1];
+
+            if (sequence.length() >= requiredMinimumLength) {
+                filteredRecords.add(record);
+            }
+        }
+
+        return filteredRecords;
     }
 }
