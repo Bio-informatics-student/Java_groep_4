@@ -273,6 +273,7 @@ public class FastqQCProcessor {
                 minimumSequenceLength,
                 maximumSequenceLength,
                 belowMinimumPercent,
+                passingReadsPercent,
                 status
         );
     }

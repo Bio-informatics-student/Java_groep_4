@@ -91,6 +91,12 @@ public class Main implements Runnable {
     private boolean showGC;
 
     @Option(
+            names = "--passing-reads",
+            description = "Show the percentage of reads that pass both quality checks"
+    )
+    private boolean showPassingReads;
+
+    @Option(
             names = "--length",
             description = "Show minimum and maximum read length"
     )
@@ -181,9 +187,10 @@ public class Main implements Runnable {
 
         boolean showAll =
                 !showQuality
-                && !showDuplicates
-                && !showGC
-                && !showLength;
+                        && !showDuplicates
+                        && !showGC
+                        && !showLength
+                        && !showPassingReads;
 
         System.out.println("Input validated: " + input);
         System.out.println("Output file: " + absoluteOutput);
@@ -221,6 +228,7 @@ public class Main implements Runnable {
                     showDuplicates,
                     showGC,
                     showLength,
+                    showPassingReads,
                     requiredMinimumLength
             );
 
@@ -233,6 +241,7 @@ public class Main implements Runnable {
                     showDuplicates,
                     showGC,
                     showLength,
+                    showPassingReads,
                     requiredMinimumLength
             );
 

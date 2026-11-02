@@ -14,6 +14,7 @@ public class QCResult {
     private final Integer minimumSequenceLength;
     private final Integer maximumSequenceLength;
     private final Double belowMinimumPercent;
+    private final Double passingReadsPercent;
     private final String status;
 
     /**
@@ -28,6 +29,7 @@ public class QCResult {
      * @param minimumSequenceLength the shortest read length
      * @param maximumSequenceLength the longest read length
      * @param belowMinimumPercent the percentage of reads below the required minimum length
+     * @param passingReadsPercent the percentage of reads that pass both read-end quality checks
      * @param status the final PASS or FAIL status
      */
     public QCResult(
@@ -40,6 +42,7 @@ public class QCResult {
             Integer minimumSequenceLength,
             Integer maximumSequenceLength,
             Double belowMinimumPercent,
+            Double passingReadsPercent,
             String status
     ) {
         this.sample = sample;
@@ -51,6 +54,7 @@ public class QCResult {
         this.minimumSequenceLength = minimumSequenceLength;
         this.maximumSequenceLength = maximumSequenceLength;
         this.belowMinimumPercent = belowMinimumPercent;
+        this.passingReadsPercent = passingReadsPercent;
         this.status = status;
     }
 
@@ -87,6 +91,10 @@ public class QCResult {
 
     public Double getBelowMinimumPercent() {
         return belowMinimumPercent;
+    }
+
+    public Double getPassingReadsPercent() {
+        return passingReadsPercent;
     }
 
     public String getStatus() {

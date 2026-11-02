@@ -20,6 +20,7 @@ public class OutputWriter {
      * @param showDuplicates whether the duplicate percentage should be shown
      * @param showGC whether the GC percentage should be shown
      * @param showLength whether the read length statistics should be shown
+     * @param showPassingReads whether the percentage of passing reads should be shown
      * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      */
     public void printToTerminal(
@@ -29,6 +30,7 @@ public class OutputWriter {
             boolean showDuplicates,
             boolean showGC,
             boolean showLength,
+            boolean showPassingReads,
             Integer requiredMinimumLength
 
     ) {
@@ -39,6 +41,7 @@ public class OutputWriter {
                         showDuplicates,
                         showGC,
                         showLength,
+                        showPassingReads,
                         requiredMinimumLength
                 )
         );
@@ -52,8 +55,9 @@ public class OutputWriter {
                             showDuplicates,
                             showGC,
                             showLength,
+                            showPassingReads,
                             requiredMinimumLength
-                            )
+                    )
             );
         }
     }
@@ -68,6 +72,7 @@ public class OutputWriter {
      * @param showDuplicates whether the duplicate percentage should be shown
      * @param showGC whether the GC percentage should be shown
      * @param showLength whether the read length statistics should be shown
+     * @param showPassingReads whether the percentage of passing reads should be shown
      * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @throws IOException when the file cannot be written
      */
@@ -79,6 +84,7 @@ public class OutputWriter {
             boolean showDuplicates,
             boolean showGC,
             boolean showLength,
+            boolean showPassingReads,
             Integer requiredMinimumLength
     ) throws IOException {
 
@@ -92,6 +98,7 @@ public class OutputWriter {
                         showDuplicates,
                         showGC,
                         showLength,
+                        showPassingReads,
                         requiredMinimumLength
                 )
         );
@@ -106,6 +113,7 @@ public class OutputWriter {
                             showDuplicates,
                             showGC,
                             showLength,
+                            showPassingReads,
                             requiredMinimumLength
                     )
             );
@@ -123,6 +131,7 @@ public class OutputWriter {
      * @param showDuplicates whether the duplicate percentage should be shown
      * @param showGC whether the GC percentage should be shown
      * @param showLength whether the read length statistics should be shown
+     * @param showPassingReads whether the percentage of passing reads should be shown
      * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @return the formatted header
      */
@@ -132,6 +141,7 @@ public class OutputWriter {
             boolean showDuplicates,
             boolean showGC,
             boolean showLength,
+            boolean showPassingReads,
             Integer requiredMinimumLength
     ) {
         StringBuilder header = new StringBuilder();
@@ -158,6 +168,10 @@ public class OutputWriter {
             }
         }
 
+        if (showAll || showPassingReads) {
+            header.append("\tPassing Reads");
+        }
+
         header.append("\tFinal Status");
 
         return header.toString();
@@ -172,6 +186,7 @@ public class OutputWriter {
      * @param showDuplicates whether the duplicate percentage should be shown
      * @param showGC whether the GC percentage should be shown
      * @param showLength whether the read length statistics should be shown
+     * @param showPassingReads whether the percentage of passing reads should be shown
      * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @return the formatted result
      */
@@ -182,6 +197,7 @@ public class OutputWriter {
             boolean showDuplicates,
             boolean showGC,
             boolean showLength,
+            boolean showPassingReads,
             Integer requiredMinimumLength
     ) {
         StringBuilder output = new StringBuilder();
@@ -217,6 +233,11 @@ public class OutputWriter {
                 output.append("\t")
                         .append(formatPercentage(result.getBelowMinimumPercent()));
             }
+        }
+
+        if (showAll || showPassingReads) {
+            output.append("\t")
+                    .append(formatPercentage(result.getPassingReadsPercent()));
         }
 
         output.append("\t")
