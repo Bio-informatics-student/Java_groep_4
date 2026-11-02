@@ -1,36 +1,63 @@
 # Developer Guide
 
-This guide describes the current implementation of SeqSpectre and explains how to build, test, maintain and extend the application.
+This guide explains the architecture, implementation, development environment and maintenance workflow of SeqSpectre.
 
-[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [CLI Commands](commands.md) · [Troubleshooting](troubleshooting.md)
+It is intended for developers who want to understand, test, maintain or extend the application.
 
-## 1. Technology stack
+[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [CLI Commands](commands.md) · [Troubleshooting](troubleshooting.md) · [Contact & Support](contact.md)
 
-SeqSpectre is developed in Java and uses the following technologies:
+---
 
-| Technology | Version | Purpose |
-|---|---|---|
-| Java | Compatible JDK | Application programming language |
-| Gradle | 9.7.1 | Build automation |
-| PicoCLI | 4.7.7 | Command-line argument parsing |
-| Shadow plugin | 9.6.1 | Executable JAR creation |
-| JUnit Jupiter | 5.11.4 | Automated unit testing |
+## 1. Development Environment
 
-The application uses the Gradle `java` and `application` plugins.
+SeqSpectre is developed in Java and uses Gradle for building and testing the application.
 
-The main application class is configured in `build.gradle`:
+### Verified development environment
 
-```groovy
-application {
-    mainClass = 'Main'
-}
+The following environment was used to develop and execute SeqSpectre successfully:
+
+| Component | Version |
+|---|---|
+| Java | OpenJDK 26.0.2.1 |
+| Java runtime build | 26.0.2.1+1-7 |
+| Gradle | 9.7.1 |
+| Groovy | 4.0.32 |
+| Kotlin | 2.4.0 |
+| Ant | 1.10.17 |
+| Operating system | Windows 11 (64-bit) |
+| Gradle Launcher JVM | 26.0.2.1 |
+| Gradle Daemon JVM | 26.0.2.1 |
+
+The configured Java installation in the verified development environment was:
+
+```text
+C:\Users\janin\.jdks\openjdk-26.0.2.1
 ```
 
-The repository includes the Gradle Wrapper, so a separate Gradle installation is not required.
+This is a machine-specific development path and is not required on other systems.
 
-## 2. Project structure
+**Compatibility note:** The verified development environment uses Java 26.0.2.1. This does not establish the minimum required JDK version. Compatibility with older Java versions should be verified through additional testing.
 
-The source code is divided into three main packages: `input`, `processing` and `output`.
+### Build dependencies
+
+The following dependencies and plugins are declared in `build.gradle`:
+
+| Dependency / Plugin | Version | Purpose |
+|---|---|---|
+| Java plugin | Gradle built-in | Compiling Java applications |
+| Application plugin | Gradle built-in | Running the application |
+| PicoCLI | 4.7.7 | Command-line argument handling |
+| JUnit Jupiter | 5.11.4 | Automated unit testing |
+| JUnit Platform Launcher | Managed through dependency configuration | JUnit test execution |
+| Shadow plugin | 9.6.1 | Creating an executable JAR |
+
+All required external dependencies are obtained through the configured Gradle repositories.
+
+---
+
+## 2. Project Structure
+
+SeqSpectre separates input handling, data processing and output generation.
 
 ```text
 Java_groep_4/
@@ -42,86 +69,105 @@ Java_groep_4/
 ├── gradlew.bat
 ├── SeqSpectre_UML.puml
 ├── docs/
+│   ├── images/
+│   │   └── seqspectre-logo.jpg
+│   ├── installation.md
+│   ├── user-guide.md
+│   ├── commands.md
+│   ├── developer-guide.md
+│   ├── troubleshooting.md
+│   └── contact.md
 ├── testdata/
+│   └── test.fastq
 └── src/
-    ├── main/java/
-    │   ├── Main.java
-    │   ├── input/
-    │   │   ├── InputController.java
-    │   │   ├── InputHandler.java
-    │   │   ├── FastQReader.java
-    │   │   ├── SamReader.java
-    │   │   ├── BamReader.java
-    │   │   └── FastQCReader.java
-    │   ├── processing/
-    │   │   ├── FastqQCProcessor.java
-    │   │   ├── AnalyseReadQuality.java
-    │   │   ├── QualityResult.java
-    │   │   ├── DuplicateCalculator.java
-    │   │   ├── GCCalculator.java
-    │   │   ├── SequenceLengthAnalyzer.java
-    │   │   ├── DataHandler.java
-    │   │   └── InvalidReadException.java
-    └── output/
-        ├── QCResult.java
-        └── OutputWriter.java
+    ├── main/
+    │   └── java/
+    │       ├── Main.java
+    │       ├── input/
+    │       │   ├── InputController.java
+    │       │   ├── InputHandler.java
+    │       │   ├── FastQReader.java
+    │       │   ├── SamReader.java
+    │       │   ├── BamReader.java
+    │       │   └── FastQCReader.java
+    │       ├── processing/
+    │       │   ├── FastqQCProcessor.java
+    │       │   ├── AnalyseReadQuality.java
+    │       │   ├── QualityResult.java
+    │       │   ├── DuplicateCalculator.java
+    │       │   ├── GCCalculator.java
+    │       │   ├── SequenceLengthAnalyzer.java
+    │       │   ├── DataHandler.java
+    │       │   └── InvalidReadException.java
+    │       └── output/
+    │           ├── QCResult.java
+    │           └── OutputWriter.java
+    └── test/
+        └── java/
+            ├── input/
+            ├── processing/
+            └── output/
 ```
 
-Automated tests are located in `src/test/java/`, divided into the same packages.
+The application uses a modular structure that allows individual analysis components to be tested separately.
 
-A PlantUML diagram is available in [SeqSpectre_UML.puml](../SeqSpectre_UML.puml).
+The project's UML representation is available in [SeqSpectre_UML.puml](../SeqSpectre_UML.puml).
 
-## 3. Application architecture
+---
 
-SeqSpectre follows a processing pipeline in which each component has a specific responsibility.
+## 3. Application Architecture
+
+SeqSpectre follows a processing pipeline consisting of input discovery, FASTQ parsing, quality analysis and output generation.
+
+### Processing workflow
 
 ```text
 Command-line arguments
-         |
-         v
-       Main
-         |
-         v
-  InputController
-         |
-         v
-    InputHandler
-         |
-         v
-     FastQReader
-         |
-         v
-  FastqQCProcessor
-         |
-         +---------------------+
-         |          |          |
-         v          v          v
-   Read Quality   Duplicates   GC
-         |
-         v
-  Sequence Length
-         |
-         v
-      QCResult
-         |
-         v
-    OutputWriter
-         |
-         +-------------+
-         |             |
-         v             v
-      Terminal      TSV File
+          |
+          v
+        Main
+          |
+          v
+   InputController
+          |
+          v
+     InputHandler
+          |
+          v
+      FastQReader
+          |
+          v
+   FastqQCProcessor
+          |
+          +----------------------+
+          |          |           |
+          v          v           v
+    Read Quality  Duplicates    GC
+          |
+          v
+   Sequence Length
+          |
+          v
+       QCResult
+          |
+          v
+     OutputWriter
+          |
+          +---------------+
+          |               |
+          v               v
+       Terminal        TSV File
 ```
 
-The pipeline begins in `Main.java`, where PicoCLI parses and validates the command-line options.
+The processing pipeline is coordinated by `Main`, `InputController` and `FastqQCProcessor`.
 
-`InputController` identifies the FASTQ input files and passes them to `FastqQCProcessor`.
+Each FASTQ file produces a separate `QCResult` object.
 
-The processor coordinates the individual analyses and creates a `QCResult` object for each sample.
+The result objects are passed to `OutputWriter`, which generates both terminal and file output.
 
-Finally, `OutputWriter` displays the results and writes them to a TSV file.
+---
 
-## 4. Classes and responsibilities
+## 4. Main Application Classes
 
 ### `Main`
 
@@ -131,15 +177,27 @@ Located in:
 src/main/java/Main.java
 ```
 
+This class is the command-line entry point.
+
+It uses PicoCLI to define and parse application arguments.
+
 Responsibilities:
 
-- Define command-line arguments using PicoCLI.
-- Validate user input and numerical thresholds.
+- Define CLI options.
+- Validate numerical parameters.
 - Validate input and output paths.
-- Create output directories.
+- Create missing output directories.
 - Start the processing pipeline.
-- Select output columns.
-- Handle application errors.
+- Configure the displayed report columns.
+- Handle execution errors.
+
+The current PicoCLI command name is:
+
+```text
+qc-tool
+```
+
+The application is distributed under the name SeqSpectre.
 
 ### `InputController`
 
@@ -149,9 +207,11 @@ Located in:
 src/main/java/input/InputController.java
 ```
 
-Coordinates input file discovery and processing.
+Responsible for coordinating FASTQ file discovery and processing.
 
-The class accepts either an individual FASTQ file or a directory and passes the detected files to `FastqQCProcessor`.
+It accepts a single FASTQ file or a directory containing supported FASTQ files.
+
+For each detected file, `FastqQCProcessor` is called.
 
 ### `InputHandler`
 
@@ -161,11 +221,16 @@ Located in:
 src/main/java/input/InputHandler.java
 ```
 
-Scans an input directory and categorizes recognized files.
+Responsible for scanning directories and recognizing input formats.
 
-The current detection implementation recognizes FASTQ, SAM, BAM and FastQC data.
+The current detection implementation recognizes:
 
-Only FASTQ files are currently connected to the complete QC pipeline.
+- FASTQ
+- SAM
+- BAM
+- FastQC output containing `fastqc_data.txt` in a direct subdirectory
+
+Only FASTQ files are currently processed by the complete CLI workflow.
 
 ### `FastQReader`
 
@@ -175,18 +240,25 @@ Located in:
 src/main/java/input/FastQReader.java
 ```
 
-Reads FASTQ records and supports both regular and gzip-compressed files.
+Responsible for reading FASTQ records.
 
-Each FASTQ record is represented using four strings:
+Supported input includes:
+
+- `.fastq`
+- `.fq`
+- `.fastq.gz`
+- `.fq.gz`
+
+Each record consists of:
 
 ```text
 Header
 Sequence
 Separator
-Quality
+Quality string
 ```
 
-The reader checks the structure of each record and rejects incomplete or invalid input.
+The reader validates the basic structure and returns the records for further processing.
 
 ### `FastqQCProcessor`
 
@@ -196,19 +268,20 @@ Located in:
 src/main/java/processing/FastqQCProcessor.java
 ```
 
-Coordinates the QC calculations for a FASTQ file.
+This class coordinates the quality control calculations.
 
-Responsibilities:
+It connects:
 
-- Read FASTQ records.
-- Calculate original sequence lengths.
-- Apply optional length filtering.
-- Analyse read-end quality.
-- Calculate duplicate percentage.
-- Calculate GC percentage.
-- Calculate passing-read percentage.
-- Determine final PASS/FAIL status.
-- Create a report-level QC result.
+- FASTQ reading.
+- Read-end quality analysis.
+- Duplicate calculation.
+- GC calculation.
+- Sequence length analysis.
+- Optional length filtering.
+- Passing-read percentage calculation.
+- Final PASS/FAIL classification.
+
+The results are stored in an `output.QCResult` object.
 
 ### `AnalyseReadQuality`
 
@@ -218,19 +291,27 @@ Located in:
 src/main/java/processing/AnalyseReadQuality.java
 ```
 
-Analyses quality values at both ends of an individual read.
+Responsible for analysing Phred+33 quality information.
 
-It decodes Phred+33 encoded quality strings and calculates:
+For each read end, it calculates:
 
 - Mean Phred score.
 - Median Phred score.
 - Minimum Phred score.
-- Percentage of bases with Q20 or higher.
-- Percentage of bases with Q30 or higher.
-- Mean estimated sequencing error probability.
-- GOOD, MODERATE or POOR classification.
+- Percentage of bases at Q20 or higher.
+- Percentage of bases at Q30 or higher.
+- Mean estimated base-call error probability.
+- Quality classification.
 
-These detailed results are stored in `processing.QualityResult`.
+The possible read-end classifications are:
+
+```text
+GOOD
+MODERATE
+POOR
+```
+
+These classifications use SeqSpectre-specific thresholds and are not official FastQC classifications.
 
 ### `DuplicateCalculator`
 
@@ -240,9 +321,9 @@ Located in:
 src/main/java/processing/DuplicateCalculator.java
 ```
 
-Calculates duplicate percentage using a `HashSet`.
+Uses a `HashSet` to determine the number of unique nucleotide sequences.
 
-Duplicate detection is based on exact equality of nucleotide sequences.
+Duplicates are identified using exact sequence equality.
 
 ### `GCCalculator`
 
@@ -252,7 +333,9 @@ Located in:
 src/main/java/processing/GCCalculator.java
 ```
 
-Calculates the percentage of guanine and cytosine across the analysed sequences.
+Calculates the GC percentage across all sequences provided to the class.
+
+G and C bases are counted case-insensitively.
 
 ### `SequenceLengthAnalyzer`
 
@@ -264,10 +347,10 @@ src/main/java/processing/SequenceLengthAnalyzer.java
 
 Provides methods for:
 
-- Determining minimum sequence length.
-- Determining maximum sequence length.
-- Calculating the percentage of reads below a minimum length.
-- Filtering records shorter than a specified length.
+- Determining minimum read length.
+- Determining maximum read length.
+- Calculating the percentage of reads below a selected length.
+- Filtering reads based on minimum length.
 
 ### `QCResult`
 
@@ -277,9 +360,9 @@ Located in:
 src/main/java/output/QCResult.java
 ```
 
-Stores the aggregated QC results for a sample, including the final PASS/FAIL status.
+Stores the aggregated QC results for one sequencing sample.
 
-This differs from `processing.QualityResult`, which stores detailed information for an individual read.
+This is different from `processing.QualityResult`, which stores detailed quality-analysis results for an individual read.
 
 ### `OutputWriter`
 
@@ -289,114 +372,204 @@ Located in:
 src/main/java/output/OutputWriter.java
 ```
 
-Responsible for formatting QC results and writing them to the terminal and a TSV file.
+Responsible for:
 
-The included columns depend on the user's display options.
+- Formatting QC measurements.
+- Selecting output columns.
+- Printing results to the terminal.
+- Writing results to a TSV file.
 
 ### Additional components
 
-`DataHandler` and `InvalidReadException` provide additional validation-related functionality.
+`DataHandler` and `InvalidReadException` provide validation-related functionality.
 
-`SamReader`, `BamReader` and `FastQCReader` are currently placeholders and do not yet implement file parsing.
+`SamReader`, `BamReader` and `FastQCReader` are currently placeholders and do not implement complete parsing.
 
-## 5. Important calculations
+---
+
+## 5. Important Algorithms and Calculations
 
 ### Read-end selection
 
-The number of bases selected at each end is:
+SeqSpectre analyses a configurable percentage of bases at each read end.
+
+The number of selected bases is:
 
 ```text
-ceil(sequence length × end percentage / 100)
+ceil(read length × percentage / 100)
 ```
 
-For example, a 16-base read with an end percentage of 10% results in two selected bases at each end.
+For example:
 
-The beginning and ending regions are analysed separately.
+```text
+Read length: 16
+End percentage: 10%
 
-### Phred scores
+ceil(16 × 0.10) = 2
+```
 
-FASTQ quality values use Phred+33 encoding.
+Two bases are analysed at each end.
 
-The numerical Phred score is calculated using:
+### Phred quality
+
+SeqSpectre uses Phred+33 encoding.
+
+The numerical quality score is calculated as:
 
 ```text
 Phred score = ASCII value - 33
 ```
 
-The estimated probability of an incorrect base call is:
+The estimated error probability is:
 
 ```text
 P(error) = 10^(-Q/10)
 ```
 
-A read passes its quality check if at least 90% of the analysed bases at both ends individually meet the selected Phred threshold.
+### Passing-read calculation
 
-### Duplicate percentage
+A read passes when both ends individually satisfy the quality requirement.
+
+For each end, at least 90% of the selected bases must meet the configured minimum Phred score.
+
+The overall passing-read percentage is:
+
+```text
+Passing Reads =
+(passing reads / analysed reads) × 100
+```
+
+### Duplicate calculation
+
+The duplicate calculator counts unique read sequences using a `HashSet`.
 
 ```text
 Duplicate percentage =
-(total reads - unique sequences) / total reads × 100
+(total reads - unique reads) / total reads × 100
 ```
 
-The calculation uses exact sequence matches.
+For example:
 
-### GC percentage
+```text
+ACGT
+ACGT
+TGCA
+CCCC
+```
+
+There are four reads and three unique sequences.
+
+```text
+Duplicate percentage = (4 - 3) / 4 × 100 = 25%
+```
+
+### GC calculation
+
+GC percentage is determined by counting guanine and cytosine bases.
 
 ```text
 GC percentage =
-(number of G and C bases / total number of sequence characters) × 100
+(number of G and C bases / total sequence characters) × 100
 ```
 
-The current implementation counts G and C case-insensitively.
+### Minimum length filtering
 
-### Sequence length filtering
+When `--min-length` is supplied:
 
-The minimum and maximum read lengths are calculated before optional length filtering.
+1. The minimum and maximum lengths are calculated from the original reads.
+2. The percentage of reads below the threshold is calculated.
+3. Reads shorter than the threshold are removed.
+4. Subsequent QC calculations use the remaining reads.
 
-After filtering, the remaining reads are used for quality, duplicate, GC and passing-read calculations.
+### Final status
 
-### Final sample status
+The final result is:
 
 ```text
-PASS if:
+PASS
+```
+
+when both conditions are satisfied:
+
+```text
 passingReadsPercent >= requiredPassingReadsPercent
+
 AND
+
 duplicatePercent <= maximumDuplicatePercent
 ```
 
-Otherwise:
+Otherwise the result is:
 
 ```text
 FAIL
 ```
 
-GC percentage and read length do not independently determine PASS or FAIL.
+---
 
-## 6. Building the application
+## 6. Gradle Configuration
 
-From the root of the repository, execute the following commands.
+SeqSpectre uses:
+
+```text
+build.gradle
+```
+
+for application configuration and dependency management.
+
+The current plugins are:
+
+```groovy
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.gradleup.shadow' version '9.6.1'
+}
+```
+
+Dependencies are obtained from Maven Central.
+
+The application entry point is configured using:
+
+```groovy
+application {
+    mainClass = 'Main'
+}
+```
+
+The Shadow plugin is configured to generate:
+
+```text
+seqspectre-all.jar
+```
+
+This JAR contains SeqSpectre and its runtime dependencies.
+
+The Gradle Wrapper version is 9.7.1.
+
+### Verifying the build environment
+
+Windows:
+
+```powershell
+.\gradlew.bat --version
+```
+
+macOS/Linux:
+
+```bash
+./gradlew --version
+```
+
+Developers should verify that Gradle uses a compatible Java installation.
+
+---
+
+## 7. Running the Application During Development
+
+Developers can run SeqSpectre directly through Gradle.
 
 ### Windows
-
-Compile and test:
-
-```powershell
-.\gradlew.bat build
-```
-
-Run all tests:
-
-```powershell
-.\gradlew.bat test
-```
-
-Create an executable JAR:
-
-```powershell
-.\gradlew.bat shadowJar
-```
-
-Run the application directly through Gradle:
 
 ```powershell
 .\gradlew.bat run --args="-i testdata/test.fastq"
@@ -405,23 +578,62 @@ Run the application directly through Gradle:
 ### macOS/Linux
 
 ```bash
-./gradlew build
-./gradlew test
-./gradlew shadowJar
 ./gradlew run --args="-i testdata/test.fastq"
 ```
 
-The executable JAR is generated at:
+Additional CLI arguments can be included.
+
+Example:
+
+```powershell
+.\gradlew.bat run --args="-i testdata/test.fastq --quality --duplicates --gc"
+```
+
+Running through Gradle is useful during development because the application does not have to be manually repackaged after every code change.
+
+---
+
+## 8. Building an Executable JAR
+
+### Windows
+
+```powershell
+.\gradlew.bat shadowJar
+```
+
+### macOS/Linux
+
+```bash
+./gradlew shadowJar
+```
+
+The resulting file is:
 
 ```text
 build/libs/seqspectre-all.jar
 ```
 
-## 7. Automated testing
+Run the application with:
 
-SeqSpectre uses JUnit Jupiter for unit testing.
+```bash
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
+```
 
-Tests are organized under:
+A clean build can be performed using:
+
+```powershell
+.\gradlew.bat clean build shadowJar
+```
+
+This removes previous build outputs, compiles the project, executes tests and creates the executable JAR.
+
+---
+
+## 9. Automated Testing
+
+SeqSpectre uses JUnit Jupiter 5.11.4.
+
+Tests are organized into the following packages:
 
 ```text
 src/test/java/input/
@@ -442,135 +654,244 @@ Current test classes include:
 - `QCResultTest`
 - `OutputWriterTest`
 
-Run all tests:
+### Run all tests
+
+Windows:
 
 ```powershell
 .\gradlew.bat test
 ```
 
-Run an individual test class:
+macOS/Linux:
+
+```bash
+./gradlew test
+```
+
+### Run a specific test class
+
+Example:
 
 ```powershell
 .\gradlew.bat test --tests processing.DuplicateCalculatorTest
 ```
 
-After execution, the HTML test report is normally available at:
+### View test results
+
+After running the tests, Gradle normally generates an HTML report:
 
 ```text
 build/reports/tests/test/index.html
 ```
 
-Recommended test cases include:
+### Recommended test coverage
 
-- Valid FASTQ records.
-- Incomplete FASTQ records.
-- Invalid sequence and quality lengths.
-- Invalid Phred characters.
+Developers should test:
+
+- Valid and invalid FASTQ records.
+- Empty FASTQ files.
 - Compressed FASTQ input.
-- Invalid file paths.
-- Boundary values for quality thresholds.
-- Duplicate and unique sequences.
-- Minimum length filtering.
-- PASS/FAIL boundary conditions.
-- Multiple input files.
-- Output column combinations.
+- Incorrect file paths.
+- Numerical boundary values.
+- Correct quality calculations.
+- Duplicate detection.
+- GC calculation.
+- Sequence length filtering.
+- PASS/FAIL classification.
+- Output formatting.
+- Multiple file processing.
 
-## 8. Adding new functionality
+---
 
-When implementing a new QC analysis:
+## 10. Verified Functional Test
 
-1. Create a focused processing class or method.
-2. Implement the calculation.
-3. Add unit tests covering normal and boundary cases.
-4. Connect the calculation to `FastqQCProcessor`.
-5. Store the result in `output.QCResult` if necessary.
-6. Extend `OutputWriter` to display the result.
-7. Add a command-line option to `Main` if the feature must be configurable.
-8. Update the relevant documentation.
-9. Run automated tests and manually verify the output.
+The included test file is:
+
+```text
+testdata/test.fastq
+```
+
+It contains four FASTQ records, each consisting of 16 nucleotides.
+
+A successful analysis was performed using:
+
+```powershell
+java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq
+```
+
+The generated `results.tsv` contained:
+
+| Measurement | Value |
+|---|---|
+| Beginning Quality | 100.0% |
+| Ending Quality | 100.0% |
+| Duplicates | 0.0% |
+| GC Percentage | 43.75% |
+| Minimum Length | 16 |
+| Maximum Length | 16 |
+| Passing Reads | 100.0% |
+| Final Status | PASS |
+
+This confirms successful execution of the standard command-line workflow in the verified development environment.
+
+It does not independently establish that all automated tests or all possible input cases pass.
+
+---
+
+## 11. Adding New QC Functionality
+
+New calculations should preferably be implemented in a separate class under:
+
+```text
+src/main/java/processing/
+```
+
+Recommended development procedure:
+
+1. Identify the required analysis.
+2. Create the processing class or method.
+3. Write unit tests for the calculation.
+4. Handle invalid or missing input.
+5. Connect the calculation to `FastqQCProcessor`.
+6. Extend `output.QCResult` if the result must be stored.
+7. Extend `OutputWriter` if the result must be displayed.
+8. Add a command-line argument in `Main` if the analysis must be configurable.
+9. Update the relevant documentation.
+10. Run automated and manual tests.
 
 ### Adding command-line options
 
-PicoCLI options are declared in `Main.java`.
+PicoCLI command-line arguments are declared in `Main.java`.
 
 Example:
 
 ```java
 @Option(
     names = "--example",
-    description = "Description of the option"
+    description = "Example command-line argument"
 )
 private boolean example;
 ```
 
-This example demonstrates the annotation structure. `--example` is not a currently supported SeqSpectre argument.
+This is an illustrative example. `--example` is not a supported argument in the current application.
 
-New options should be validated before processing and passed to the appropriate classes.
+New arguments should have descriptive names, clear documentation and appropriate validation.
 
-## 9. Git development workflow
+---
 
-Developers should preferably work on separate feature branches.
+## 12. Git Development Workflow
 
-Example:
+A recommended workflow is to implement changes in separate Git branches.
+
+### Create a new branch
 
 ```bash
 git checkout -b feature/new-analysis
 ```
 
-After implementing the feature:
+### Check modified files
 
 ```bash
 git status
 ```
 
-Run tests:
+### Run automated tests
+
+Windows:
+
+```powershell
+.\gradlew.bat test
+```
+
+macOS/Linux:
 
 ```bash
 ./gradlew test
 ```
 
-Stage changed files:
+### Stage changes
 
 ```bash
 git add .
 ```
 
-Commit:
+### Commit
 
 ```bash
 git commit -m "Add new QC functionality"
 ```
 
-Push the feature branch:
+### Push the branch
 
 ```bash
 git push -u origin feature/new-analysis
 ```
 
-The changes can then be reviewed and merged into the main branch.
+Changes should be reviewed before merging them into the main branch.
 
-Avoid committing temporary output files, build artifacts and sensitive sequencing data.
+Avoid committing:
 
-## 10. Known limitations
+- Temporary build outputs.
+- Generated local result files.
+- Large sequencing datasets that are not needed for testing.
+- Confidential or sensitive sequencing information.
+- Environment-specific configuration containing private paths or credentials.
 
-The current version has several limitations:
+---
 
-- The complete processing pipeline supports FASTQ input only.
-- SAM, BAM and FastQC reader classes are not implemented.
+## 13. Repository Access and Contributions
+
+SeqSpectre is hosted on GitHub:
+
+https://github.com/Bio-informatics-student/Java_groep_4
+
+The repository can be viewed and downloaded publicly.
+
+Direct changes to the original repository require the necessary GitHub permissions.
+
+Developers should use separate branches and pull requests when proposing changes.
+
+Repository administrators can configure branch protection or repository rulesets to restrict direct changes to the main branch.
+
+Public source-code availability does not automatically establish an open-source license or permission to redistribute modified versions.
+
+For questions or feature suggestions, see the [Contact & Support Guide](contact.md).
+
+---
+
+## 14. Current Limitations
+
+The current version of SeqSpectre has the following limitations:
+
+- FASTQ is the only format connected to the complete QC processing pipeline.
+- SAM, BAM and FastQC reader classes are not yet implemented.
 - Directory scanning is not recursive.
-- Duplicate detection is based on exact sequence equality.
-- FASTQ records are loaded into memory, which can require substantial memory for large datasets.
-- The command-line name is currently `qc-tool`, although the project is called SeqSpectre.
-- The application version is not explicitly configured in the PicoCLI command annotation.
+- FASTQ records are loaded into memory.
+- Duplicate detection uses exact nucleotide sequence equality.
+- GC percentage and sequence length do not independently affect PASS/FAIL.
+- The PicoCLI command is currently named `qc-tool`.
+- An explicit application release version is not configured in the PicoCLI annotation.
+- Java compatibility has been verified in the supplied Java 26.0.2.1 development environment, but the minimum compatible Java version has not been established.
 
-Potential future improvements include streaming FASTQ input, additional file formats, extended QC analyses and configurable status requirements.
+Potential future improvements include:
 
-## 11. Further documentation
+- Support for additional sequencing file formats.
+- Streaming FASTQ processing for large datasets.
+- Additional QC measurements.
+- More configurable PASS/FAIL criteria.
+- Improved reporting formats.
+- Performance optimization.
+- Further compatibility testing across Java versions and operating systems.
+
+---
+
+## 15. Further Documentation
 
 - [Installation Guide](installation.md)
 - [User Guide](user-guide.md)
 - [CLI Command Reference](commands.md)
 - [Troubleshooting Guide](troubleshooting.md)
+- [Contact & Support](contact.md)
 
 ---
 
