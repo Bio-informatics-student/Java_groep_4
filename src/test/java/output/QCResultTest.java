@@ -21,6 +21,11 @@ public class QCResultTest {
                 96.0,
                 91.0,
                 8.0,
+                41.0,
+                50,
+                150,
+                10.0,
+                90.0,
                 "PASS"
         );
 
@@ -39,12 +44,22 @@ public class QCResultTest {
                 96.0,
                 91.0,
                 8.0,
+                41.0,
+                50,
+                150,
+                10.0,
+                90.0,
                 "PASS"
         );
 
         assertEquals(96.0, result.getBeginningQuality());
         assertEquals(91.0, result.getEndQuality());
         assertEquals(8.0, result.getDuplicates());
+        assertEquals(41.0, result.getGcPercentage());
+        assertEquals(50, result.getMinimumSequenceLength());
+        assertEquals(150, result.getMaximumSequenceLength());
+        assertEquals(10.0, result.getBelowMinimumPercent());
+        assertEquals(90.0, result.getPassingReadsPercent());
     }
 
     /**
@@ -58,6 +73,11 @@ public class QCResultTest {
                 94.0,
                 72.0,
                 11.0,
+                45.0,
+                60,
+                150,
+                15.0,
+                75.0,
                 "FAIL"
         );
 
@@ -75,6 +95,11 @@ public class QCResultTest {
                 96.0,
                 null,
                 8.0,
+                41.0,
+                50,
+                150,
+                10.0,
+                90.0,
                 "PASS"
         );
 

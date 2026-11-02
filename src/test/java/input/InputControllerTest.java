@@ -34,7 +34,8 @@ public class InputControllerTest {
                         10.0,
                         80.0,
                         20.0,
-                        20
+                        20,
+                        150
                 )
         );
     }

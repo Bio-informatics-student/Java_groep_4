@@ -27,12 +27,27 @@ public class OutputWriterTest {
                 96.0,
                 91.0,
                 8.0,
+                41.00,
+                50,
+                150,
+                null,
+                90.00,
                 "PASS"
         );
 
         Path outputFile = Files.createTempFile("QCOutput", ".txt");
 
-        writer.writeToFile(List.of(result), outputFile);
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null
+                );
 
         assertTrue(Files.exists(outputFile));
     }
@@ -46,21 +61,38 @@ public class OutputWriterTest {
 
         QCResult result = new QCResult(
                 "Sample01",
-                "BAM",
+                "FASTQ",
                 96.0,
                 91.0,
                 8.0,
+                41.00,
+                50,
+                150,
+                90.00,
+                85.00,
                 "PASS"
         );
 
         Path outputFile = Files.createTempFile("QCOutput", ".txt");
 
-        writer.writeToFile(List.of(result), outputFile);
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                100
+        );
 
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains(
-                "Sample\tType\tBegin kwaliteit\tEind kwaliteit\tDuplicaten\tEindstatus"
+                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tGC Percentage" +
+                        "\tMinimum Length\tMaximum Length\t% Reads Below Minimum Length" +
+                        "\tPassing Reads\tFinal Status"
         ));
     }
 
@@ -73,21 +105,35 @@ public class OutputWriterTest {
 
         QCResult result = new QCResult(
                 "Sample01",
-                "BAM",
+                "FASTQ",
                 96.0,
                 91.0,
                 8.0,
+                41.00,
+                50,
+                150,
+                null,
+                10.0,
                 "PASS"
         );
 
         Path outputFile = Files.createTempFile("QCOutput", ".txt");
 
-        writer.writeToFile(List.of(result), outputFile);
-
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null
+        );
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains(
-                "Sample01\tBAM\t96.0%\t91.0%\t8.0%\tPASS"
+                "Sample01\tFASTQ\t96.0%\t91.0%\t8.0%\t41.0%\t50\t150\t10.0%\tPASS"
         ));
     }
 
@@ -104,6 +150,11 @@ public class OutputWriterTest {
                 96.0,
                 91.0,
                 8.0,
+                41.00,
+                50,
+                150,
+                10.00,
+                90.00,
                 "PASS"
         );
 
@@ -113,6 +164,11 @@ public class OutputWriterTest {
                 94.0,
                 72.0,
                 11.0,
+                45.00,
+                60,
+                150,
+                15.00,
+                75.00,
                 "FAIL"
         );
 
@@ -120,18 +176,25 @@ public class OutputWriterTest {
 
         writer.writeToFile(
                 List.of(result1, result2),
-                outputFile
+                outputFile,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                100
         );
 
         String output = Files.readString(outputFile);
 
-        assertTrue(output.contains(
-                "Sample01\tBAM\t96.0%\t91.0%\t8.0%\tPASS"
-        ));
+        assertTrue(output.contains("Sample01"));
+        assertTrue(output.contains("90.0%"));
+        assertTrue(output.contains("PASS"));
 
-        assertTrue(output.contains(
-                "Sample02\tBAM\t94.0%\t72.0%\t11.0%\tFAIL"
-        ));
+        assertTrue(output.contains("Sample02"));
+        assertTrue(output.contains("75.0%"));
+        assertTrue(output.contains("FAIL"));
     }
 
     /**
@@ -147,17 +210,158 @@ public class OutputWriterTest {
                 96.0,
                 null,
                 8.0,
+                41.00,
+                50,
+                150,
+                10.0,
+                90.00,
                 "PASS"
         );
 
         Path outputFile = Files.createTempFile("QCOutput", ".txt");
 
-        writer.writeToFile(List.of(result), outputFile);
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                100
+        );
+        String output = Files.readString(outputFile);
+
+        assertTrue(output.contains("N/A"));
+    }
+
+    /**
+     * Checks that only the selected GC percentage is shown.
+     */
+    @Test
+    void writesOnlySelectedGCStatistic() throws Exception {
+        OutputWriter writer = new OutputWriter();
+
+        QCResult result = new QCResult(
+                "Sample01",
+                "FASTQ",
+                96.00,
+                91.00,
+                8.0,
+                41.00,
+                50,
+                150,
+                10.00,
+                90.00,
+                "PASS"
+        );
+
+        Path outputFile = Files.createTempFile("QCOutput", ".txt");
+
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                null
+        );
 
         String output = Files.readString(outputFile);
 
-        assertTrue(output.contains(
-                "Sample01\tBAM\t96.0%\tN/A\t8.0%\tPASS"
-        ));
+        assertTrue(output.contains("GC Percentage"));
+        assertTrue(output.contains("41.0%"));
+    }
+
+    /**
+     * Checks that length statistics and the percentage of reads below the
+     * required minimum length are shown.
+     */
+    @Test
+    void writesMultipleGCStatistic() throws Exception {
+        OutputWriter writer = new OutputWriter();
+
+        QCResult result = new QCResult(
+                "Sample01",
+                "FASTQ",
+                96.0,
+                91.0,
+                8.0,
+                41.0,
+                50,
+                150,
+                10.0,
+                90.0,
+                "PASS"
+        );
+
+        Path outputFile = Files.createTempFile("QCOutput", ".txt");
+
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                100
+        );
+
+        String output = Files.readString(outputFile);
+
+        assertTrue(output.contains("Minimum Length"));
+        assertTrue(output.contains("Maximum Length"));
+        assertTrue(output.contains("% Reads Below Minimum Length"));
+
+        assertTrue(output.contains("50"));
+        assertTrue(output.contains("150"));
+        assertTrue(output.contains("10.0%"));
+    }
+
+    /**
+     * Checks that the passing reads percentage can be selected separately.
+     */
+    @Test
+    void writesSelectedPassingReadsPercentage() throws Exception {
+        OutputWriter writer = new OutputWriter();
+
+        QCResult result = new QCResult(
+                "Sample01",
+                "FASTQ",
+                96.0,
+                91.0,
+                8.0,
+                41.0,
+                50,
+                150,
+                10.0,
+                90.0,
+                "PASS"
+        );
+
+        Path outputFile = Files.createTempFile("QCOutput", ".txt");
+
+        writer.writeToFile(
+                List.of(result),
+                outputFile,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                null
+        );
+
+        String output = Files.readString(outputFile);
+
+        assertTrue(output.contains("Passing Reads"));
+        assertTrue(output.contains("90.0%"));
     }
 }
