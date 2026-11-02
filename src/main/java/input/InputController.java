@@ -34,6 +34,7 @@ public class InputController {
      * @param requiredPassingReadsPercent minimum percentage of reads that must pass
      * @param maximumDuplicatePercent maximum allowed duplicate percentage
      * @param minQualityScore minimum Phred score for a base to pass
+     * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @return one QC result for each processed FASTQ file
      * @throws IOException if an input file cannot be read
      * @throws IllegalArgumentException if the input is invalid or no FASTQ files are found
@@ -43,7 +44,8 @@ public class InputController {
             double endPercentage,
             double requiredPassingReadsPercent,
             double maximumDuplicatePercent,
-            int minQualityScore
+            int minQualityScore,
+            Integer requiredMinimumLength
     ) throws IOException {
 
         List<Path> fastqFiles = new ArrayList<>();
@@ -76,7 +78,8 @@ public class InputController {
                             endPercentage,
                             requiredPassingReadsPercent,
                             maximumDuplicatePercent,
-                            minQualityScore
+                            minQualityScore,
+                            requiredMinimumLength
                     )
             );
         }

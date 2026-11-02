@@ -15,14 +15,46 @@ public class OutputWriter {
      * Prints the QC results to the terminal.
      *
      * @param results the QC results to print
+     * @param showAll whether all QC statistics should be shown
+     * @param showQuality whether beginning and ending quality should be shown
+     * @param showDuplicates whether the duplicate percentage should be shown
+     * @param showGC whether the GC percentage should be shown
+     * @param showLength whether the read length statistics should be shown
+     * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      */
-    public void printToTerminal(List<QCResult> results) {
+    public void printToTerminal(
+            List<QCResult> results,
+            boolean showAll,
+            boolean showQuality,
+            boolean showDuplicates,
+            boolean showGC,
+            boolean showLength,
+            Integer requiredMinimumLength
+
+    ) {
         System.out.println(
-                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tFinal Status"
+                formatHeader(
+                        showAll,
+                        showQuality,
+                        showDuplicates,
+                        showGC,
+                        showLength,
+                        requiredMinimumLength
+                )
         );
 
         for (QCResult result : results) {
-            System.out.println(formatResult(result));
+            System.out.println(
+                    formatResult(
+                            result,
+                            showAll,
+                            showQuality,
+                            showDuplicates,
+                            showGC,
+                            showLength,
+                            requiredMinimumLength
+                            )
+            );
         }
     }
 
@@ -31,22 +63,52 @@ public class OutputWriter {
      *
      * @param results the QC results to write
      * @param outputFile the file where the results are written
+     * @param showAll whether all QC statistics should be shown
+     * @param showQuality whether beginning and ending quality should be shown
+     * @param showDuplicates whether the duplicate percentage should be shown
+     * @param showGC whether the GC percentage should be shown
+     * @param showLength whether the read length statistics should be shown
+     * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @throws IOException when the file cannot be written
      */
     public void writeToFile(
             List<QCResult> results,
-            Path outputFile
+            Path outputFile,
+            boolean showAll,
+            boolean showQuality,
+            boolean showDuplicates,
+            boolean showGC,
+            boolean showLength,
+            Integer requiredMinimumLength
     ) throws IOException {
 
         // Build one TSV table with a header and one row for each sample.
         StringBuilder output = new StringBuilder();
 
         output.append(
-                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tFinal Status\n"
+                formatHeader(
+                        showAll,
+                        showQuality,
+                        showDuplicates,
+                        showGC,
+                        showLength,
+                        requiredMinimumLength
+                )
         );
+        output.append("\n");
 
         for (QCResult result : results) {
-            output.append(formatResult(result));
+            output.append(
+                    formatResult(
+                            result,
+                            showAll,
+                            showQuality,
+                            showDuplicates,
+                            showGC,
+                            showLength,
+                            requiredMinimumLength
+                    )
+            );
             output.append("\n");
         }
 
@@ -54,19 +116,115 @@ public class OutputWriter {
     }
 
     /**
+     * Creates a header only containing the selected QC statistics.
+     *
+     * @param showAll whether all QC statistics should be shown
+     * @param showQuality whether beginning and ending quality should be shown
+     * @param showDuplicates whether the duplicate percentage should be shown
+     * @param showGC whether the GC percentage should be shown
+     * @param showLength whether the read length statistics should be shown
+     * @param requiredMinimumLength minimum required read length, or null if no minimum is given
+     * @return the formatted header
+     */
+    private String formatHeader(
+            boolean showAll,
+            boolean showQuality,
+            boolean showDuplicates,
+            boolean showGC,
+            boolean showLength,
+            Integer requiredMinimumLength
+    ) {
+        StringBuilder header = new StringBuilder();
+
+        header.append("Sample\tType");
+
+        if (showAll || showQuality) {
+            header.append("\tBeginning Quality\tEnding Quality");
+        }
+
+        if (showAll || showDuplicates) {
+            header.append("\tDuplicates");
+        }
+
+        if (showAll || showGC) {
+            header.append("\tGC Percentage");
+        }
+
+        if (showAll || showLength) {
+            header.append("\tMinimum Length\tMaximum Length");
+
+            if (requiredMinimumLength != null) {
+                header.append("\t% Reads Below Minimum Length");
+            }
+        }
+
+        header.append("\tFinal Status");
+
+        return header.toString();
+    }
+
+    /**
      * Converts one QC result into one line of output.
      *
      * @param result the QC result
+     * @param showAll whether all QC statistics should be shown
+     * @param showQuality whether beginning and ending quality should be shown
+     * @param showDuplicates whether the duplicate percentage should be shown
+     * @param showGC whether the GC percentage should be shown
+     * @param showLength whether the read length statistics should be shown
+     * @param requiredMinimumLength minimum required read length, or null if no minimum is given
      * @return the formatted result
      */
-    private String formatResult(QCResult result) {
-        return result.getSample() + "\t"
-                + result.getFileType() + "\t"
-                + formatPercentage(result.getBeginningQuality()) + "\t"
-                + formatPercentage(result.getEndQuality()) + "\t"
-                + formatPercentage(result.getDuplicates()) + "\t"
-                + result.getStatus();
+    private String formatResult(
+            QCResult result,
+            boolean showAll,
+            boolean showQuality,
+            boolean showDuplicates,
+            boolean showGC,
+            boolean showLength,
+            Integer requiredMinimumLength
+    ) {
+        StringBuilder output = new StringBuilder();
+
+        output.append(result.getSample())
+                .append("\t")
+                .append(result.getFileType());
+
+        if (showAll || showQuality) {
+            output.append("\t")
+                    .append(formatPercentage(result.getBeginningQuality()))
+                    .append("\t")
+                    .append(formatPercentage(result.getEndQuality()));
+        }
+
+        if (showAll || showDuplicates) {
+            output.append("\t")
+                    .append(formatPercentage(result.getDuplicates()));
+        }
+
+        if (showAll || showGC) {
+            output.append("\t")
+                    .append(formatPercentage(result.getGcPercentage()));
+        }
+
+        if (showAll || showLength) {
+            output.append("\t")
+                    .append(result.getMinimumSequenceLength())
+                    .append("\t")
+                    .append(result.getMaximumSequenceLength());
+
+            if (requiredMinimumLength != null) {
+                output.append("\t")
+                        .append(formatPercentage(result.getBelowMinimumPercent()));
+            }
+        }
+
+        output.append("\t")
+                .append(result.getStatus());
+
+        return output.toString();
     }
+
 
     /**
      * Formats a percentage or returns N/A when no value is available.

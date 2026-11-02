@@ -71,6 +71,37 @@ public class Main implements Runnable {
     )
     private int minQualityScore;
 
+    // Options that allow the user to choose which QC statistics to show
+    @Option(
+            names = "--quality",
+            description = "Show the quality percentages at the start and end of reads"
+    )
+    private boolean showQuality;
+
+    @Option(
+            names = "--duplicates",
+            description = "Show duplicate read percentage"
+    )
+    private boolean showDuplicates;
+
+    @Option(
+            names = "--gc",
+            description = "Show GC percentage of the reads"
+    )
+    private boolean showGC;
+
+    @Option(
+            names = "--length",
+            description = "Show minimum and maximum read length"
+    )
+    private boolean showLength;
+
+    @Option(
+            names = "--min-length",
+            description = "Minimum required sequence length"
+    )
+    private Integer requiredMinimumLength;
+
     /**
      * Executes after PicoCLI has parsed the command-line arguments.
      */
@@ -142,6 +173,18 @@ public class Main implements Runnable {
             );
         }
 
+        if (requiredMinimumLength != null && requiredMinimumLength < 1) {
+            throw new IllegalArgumentException(
+                    "--min-length must be at least 1."
+            );
+        }
+
+        boolean showAll =
+                !showQuality
+                && !showDuplicates
+                && !showGC
+                && !showLength;
+
         System.out.println("Input validated: " + input);
         System.out.println("Output file: " + absoluteOutput);
 
@@ -165,15 +208,33 @@ public class Main implements Runnable {
                     endPercent,
                     requiredReadsPercent,
                     maxDuplicatePercent,
-                    minQualityScore
+                    minQualityScore,
+                    requiredMinimumLength
             );
 
             // Display the QC results in the terminal.
             OutputWriter writer = new OutputWriter();
-            writer.printToTerminal(results);
+            writer.printToTerminal(
+                    results,
+                    showAll,
+                    showQuality,
+                    showDuplicates,
+                    showGC,
+                    showLength,
+                    requiredMinimumLength
+            );
 
             // Write the QC results to the output file.
-            writer.writeToFile(results, absoluteOutput);
+            writer.writeToFile(
+                    results,
+                    absoluteOutput,
+                    showAll,
+                    showQuality,
+                    showDuplicates,
+                    showGC,
+                    showLength,
+                    requiredMinimumLength
+            );
 
             System.out.println();
             System.out.println(
