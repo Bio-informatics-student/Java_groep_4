@@ -17,12 +17,16 @@ public class FastqQCProcessor {
     private final FastQReader reader;
     private final AnalyseReadQuality qualityAnalyzer;
     private final DuplicateCalculator duplicateCalculator;
+    private final GCCalculator gcCalculator;
+    private final SequenceLengthAnalyzer sequenceLengthAnalyzer;
 
     // Creates the reader and analysis components used for each FASTQ file.
     public FastqQCProcessor() {
         this.reader = new FastQReader();
         this.qualityAnalyzer = new AnalyseReadQuality();
         this.duplicateCalculator = new DuplicateCalculator();
+        this.gcCalculator = new GCCalculator();
+        this.sequenceLengthAnalyzer = new SequenceLengthAnalyzer();
     }
 
     /**
@@ -32,14 +36,16 @@ public class FastqQCProcessor {
             Path file,
             double endPercentage,
             double requiredPassingReadsPercent,
-            double maximumDuplicatePercent
+            double maximumDuplicatePercent,
+            Integer requiredMinimumLength
     ) throws IOException {
         return process(
                 file,
                 endPercentage,
                 requiredPassingReadsPercent,
                 maximumDuplicatePercent,
-                30
+                30,
+                requiredMinimumLength
         );
     }
 
@@ -51,13 +57,26 @@ public class FastqQCProcessor {
      *
      * A read passes when at least 90% of the bases at both ends meet
      * the selected minimum Phred score.
+     *
+     * Reads shorter than the required minimum length are excluded
+     * from further QC calculations when a minimum length is provided.
+     *
+     * @param file the FASTQ file to process
+     * @param endPercentage the percentage of each read end to analyse
+     * @param requiredPassingReadsPercent the minimum percentage of reads that must pass
+     * @param maximumDuplicatePercent the maximum allowed duplicate percentage
+     * @param minQualityScore the minimum Phred score
+     * @param requiredMinimumLength the minimum read length, or null if no length filter is used
+     * @return the QC results for the FASTQ file
+     * @throws IOException if the FASTQ file cannot be processed
      */
     public QCResult process(
             Path file,
             double endPercentage,
             double requiredPassingReadsPercent,
             double maximumDuplicatePercent,
-            int minQualityScore
+            int minQualityScore,
+            Integer requiredMinimumLength
     ) throws IOException {
 
         // Validate the processing settings.
@@ -99,8 +118,49 @@ public class FastqQCProcessor {
             );
         }
 
-        // Keep the sequences for duplicate calculation after the quality checks.
-        List<String> sequences = new ArrayList<>(records.size());
+        // Collect all sequences before filtering
+        // These are used to calculate the original minimum and maximum length
+        List<String> allSequences = new ArrayList<>(records.size());
+
+        for (String[] record : records) {
+            allSequences.add(record[1]);
+        }
+
+        // Calculate the shortest and longest read in the FASTQ file
+        int minimumSequenceLength = sequenceLengthAnalyzer.getMinimumLength(allSequences);
+
+        int maximumSequenceLength = sequenceLengthAnalyzer.getMaximumLength(allSequences);
+
+        // Calculate how many reads are below the user-selected minimum length
+        double belowMinimumPercent = 0.0;
+
+        if (requiredMinimumLength != null) {
+            belowMinimumPercent = sequenceLengthAnalyzer.calculatePercentageBelowMinimum(
+                    allSequences,
+                    requiredMinimumLength
+            );
+        }
+
+        // Use all records when no minimum length was selected
+        List<String[]> recordsToProcess = records;
+
+        // If a minimum length was selected, remove reads that are too short
+        if (requiredMinimumLength != null) {
+            recordsToProcess = sequenceLengthAnalyzer.filterByMinimumLength(
+                    records,
+                    requiredMinimumLength
+            );
+        }
+
+        // Stop if the length filter removed all reads
+        if (recordsToProcess.isEmpty()) {
+            throw new IOException(
+                    "No reads meet the required minimum length: " + requiredMinimumLength + " in file: " + file
+            );
+        }
+
+        // Keep the (remaining) sequences for duplicate calculation after the quality checks.
+        List<String> sequences = new ArrayList<>(recordsToProcess.size());
 
         long startPassingBases = 0;
         long endPassingBases = 0;
@@ -109,7 +169,7 @@ public class FastqQCProcessor {
 
         int passingReads = 0;
 
-        for (String[] record : records) {
+        for (String[] record : recordsToProcess) {
             String sequence = record[1];
             String quality = record[3];
 
@@ -183,9 +243,13 @@ public class FastqQCProcessor {
                 sequences.toArray(new String[0])
         );
 
+        // Calculate the GC percentage of the reads
+        double gcPercentage =
+                gcCalculator.calculateGCPercentage(sequences);
+
         // Calculate the percentage of reads passing at both ends.
         double passingReadsPercent =
-                100.0 * passingReads / records.size();
+                100.0 * passingReads / recordsToProcess.size();
 
         // The file passes only if both the read-quality requirement and
         // the maximum duplicate percentage requirement pass.
@@ -205,6 +269,10 @@ public class FastqQCProcessor {
                 beginningQuality,
                 endingQuality,
                 duplicatePercent,
+                gcPercentage,
+                minimumSequenceLength,
+                maximumSequenceLength,
+                belowMinimumPercent,
                 status
         );
     }

@@ -10,6 +10,10 @@ public class QCResult {
     private final Double beginningQuality;
     private final Double endQuality;
     private final Double duplicates;
+    private final Double gcPercentage;
+    private final Integer minimumSequenceLength;
+    private final Integer maximumSequenceLength;
+    private final Double belowMinimumPercent;
     private final String status;
 
     /**
@@ -20,6 +24,10 @@ public class QCResult {
      * @param beginningQuality the quality percentage at the beginning of the reads
      * @param endQuality the quality percentage at the end of the reads
      * @param duplicates the percentage of duplicate reads
+     * @param gcPercentage the GC percentage of the reads
+     * @param minimumSequenceLength the shortest read length
+     * @param maximumSequenceLength the longest read length
+     * @param belowMinimumPercent the percentage of reads below the required minimum length
      * @param status the final PASS or FAIL status
      */
     public QCResult(
@@ -28,6 +36,10 @@ public class QCResult {
             Double beginningQuality,
             Double endQuality,
             Double duplicates,
+            Double gcPercentage,
+            Integer minimumSequenceLength,
+            Integer maximumSequenceLength,
+            Double belowMinimumPercent,
             String status
     ) {
         this.sample = sample;
@@ -35,6 +47,10 @@ public class QCResult {
         this.beginningQuality = beginningQuality;
         this.endQuality = endQuality;
         this.duplicates = duplicates;
+        this.gcPercentage = gcPercentage;
+        this.minimumSequenceLength = minimumSequenceLength;
+        this.maximumSequenceLength = maximumSequenceLength;
+        this.belowMinimumPercent = belowMinimumPercent;
         this.status = status;
     }
 
@@ -56,6 +72,21 @@ public class QCResult {
 
     public Double getDuplicates() {
         return duplicates;
+    }
+
+    public Double getGcPercentage() {
+        return gcPercentage;
+    }
+
+    public Integer getMinimumSequenceLength() {
+        return minimumSequenceLength;
+    }
+    public Integer getMaximumSequenceLength() {
+        return maximumSequenceLength;
+    }
+
+    public Double getBelowMinimumPercent() {
+        return belowMinimumPercent;
     }
 
     public String getStatus() {
