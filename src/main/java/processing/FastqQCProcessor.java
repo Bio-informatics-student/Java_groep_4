@@ -231,6 +231,10 @@ public class FastqQCProcessor {
             }
         }
 
+        if (requiredMinimumLength != null) {
+            minimumSequenceLength = sequenceLengthAnalyzer.getMinimumLength(sequences);
+        }
+
         // Calculate the overall percentages of bases passing the threshold.
         double beginningQuality =
                 100.0 * startPassingBases / totalStartBases;
