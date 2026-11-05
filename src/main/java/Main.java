@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Scanner;
 
 /**
  * Main entry point for the sequencing QC tool.
@@ -107,6 +108,14 @@ public class Main implements Runnable {
             description = "Minimum required sequence length"
     )
     private Integer requiredMinimumLength;
+
+    // Easter egg for Bart Barnard
+
+    @Option(
+            names = "--bart-mode",
+            hidden = true
+    )
+    private boolean bartMode;
 
     /**
      * Executes after PicoCLI has parsed the command-line arguments.
@@ -251,6 +260,12 @@ public class Main implements Runnable {
                             + absoluteOutput
             );
 
+            // Easter egg for Bart Barnard
+            if (bartMode) {
+                Scanner scanner = new Scanner(System.in);
+                bartCheck(scanner);
+            }
+
         } catch (IOException e) {
             // Display file access and processing errors clearly.
             throw new IllegalStateException(
@@ -280,5 +295,18 @@ public class Main implements Runnable {
         // Parse the arguments and run the command.
         int exitCode = commandLine.execute(args);
         System.exit(exitCode);
+    }
+
+    private static void bartCheck(Scanner scanner) {
+        System.out.println();
+        System.out.println("Is your name Bart Barnard? (yes/no)");
+
+        String answer = scanner.nextLine().trim();
+
+        if (answer.equalsIgnoreCase("yes")
+                || answer.equalsIgnoreCase("y")) {
+            System.out.println();
+            System.out.println("KRAK U HEEFT VERLOREN");
+        }
     }
 }
