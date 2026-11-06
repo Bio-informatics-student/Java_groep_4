@@ -47,7 +47,7 @@ public class OutputWriterTest {
                 false,
                 false,
                 null
-                );
+        );
 
         assertTrue(Files.exists(outputFile));
     }
@@ -90,7 +90,7 @@ public class OutputWriterTest {
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains(
-                "Sample\tType\tBeginning Quality\tEnding Quality\tDuplicates\tGC Percentage" +
+                "Sample\tType\tTotal Reads\tBeginning Quality\tEnding Quality\tDuplicates\tGC Percentage" +
                         "\tMinimum Length\tMaximum Length\t% Reads Below Minimum Length" +
                         "\tPassing Reads\tFinal Status"
         ));
@@ -133,7 +133,7 @@ public class OutputWriterTest {
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains(
-                "Sample01\tFASTQ\t96.0%\t91.0%\t8.0%\t41.0%\t50\t150\t10.0%\tPASS"
+                "Sample01\tFASTQ\tN/A\t96.00%\t91.00%\t8.00%\t41.00%\t50\t150\t10.00%\tPASS"
         ));
     }
 
@@ -189,11 +189,11 @@ public class OutputWriterTest {
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains("Sample01"));
-        assertTrue(output.contains("90.0%"));
+        assertTrue(output.contains("90.00%"));
         assertTrue(output.contains("PASS"));
 
         assertTrue(output.contains("Sample02"));
-        assertTrue(output.contains("75.0%"));
+        assertTrue(output.contains("75.00%"));
         assertTrue(output.contains("FAIL"));
     }
 
@@ -274,7 +274,7 @@ public class OutputWriterTest {
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains("GC Percentage"));
-        assertTrue(output.contains("41.0%"));
+        assertTrue(output.contains("41.00%"));
     }
 
     /**
@@ -321,7 +321,7 @@ public class OutputWriterTest {
 
         assertTrue(output.contains("50"));
         assertTrue(output.contains("150"));
-        assertTrue(output.contains("10.0%"));
+        assertTrue(output.contains("10.00%"));
     }
 
     /**
@@ -362,6 +362,6 @@ public class OutputWriterTest {
         String output = Files.readString(outputFile);
 
         assertTrue(output.contains("Passing Reads"));
-        assertTrue(output.contains("90.0%"));
+        assertTrue(output.contains("90.00%"));
     }
 }

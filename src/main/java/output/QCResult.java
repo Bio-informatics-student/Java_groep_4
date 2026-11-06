@@ -15,6 +15,7 @@ public class QCResult {
     private final Integer maximumSequenceLength;
     private final Double belowMinimumPercent;
     private final Double passingReadsPercent;
+    private final Integer totalReads;
     private final String status;
 
     /**
@@ -30,7 +31,40 @@ public class QCResult {
      * @param maximumSequenceLength the longest read length
      * @param belowMinimumPercent the percentage of reads below the required minimum length
      * @param passingReadsPercent the percentage of reads that pass both read-end quality checks
+     * @param totalReads the total number of reads in the original FASTQ file
      * @param status the final PASS or FAIL status
+     */
+    public QCResult(
+            String sample,
+            String fileType,
+            Double beginningQuality,
+            Double endQuality,
+            Double duplicates,
+            Double gcPercentage,
+            Integer minimumSequenceLength,
+            Integer maximumSequenceLength,
+            Double belowMinimumPercent,
+            Double passingReadsPercent,
+            Integer totalReads,
+            String status
+    ) {
+        this.sample = sample;
+        this.fileType = fileType;
+        this.beginningQuality = beginningQuality;
+        this.endQuality = endQuality;
+        this.duplicates = duplicates;
+        this.gcPercentage = gcPercentage;
+        this.minimumSequenceLength = minimumSequenceLength;
+        this.maximumSequenceLength = maximumSequenceLength;
+        this.belowMinimumPercent = belowMinimumPercent;
+        this.passingReadsPercent = passingReadsPercent;
+        this.totalReads = totalReads;
+        this.status = status;
+    }
+
+    /**
+     * Creates a QCResult without a total-read count.
+     * This constructor is retained for callers that do not provide that value.
      */
     public QCResult(
             String sample,
@@ -45,17 +79,9 @@ public class QCResult {
             Double passingReadsPercent,
             String status
     ) {
-        this.sample = sample;
-        this.fileType = fileType;
-        this.beginningQuality = beginningQuality;
-        this.endQuality = endQuality;
-        this.duplicates = duplicates;
-        this.gcPercentage = gcPercentage;
-        this.minimumSequenceLength = minimumSequenceLength;
-        this.maximumSequenceLength = maximumSequenceLength;
-        this.belowMinimumPercent = belowMinimumPercent;
-        this.passingReadsPercent = passingReadsPercent;
-        this.status = status;
+        this(sample, fileType, beginningQuality, endQuality, duplicates,
+                gcPercentage, minimumSequenceLength, maximumSequenceLength,
+                belowMinimumPercent, passingReadsPercent, null, status);
     }
 
     public String getSample() {
@@ -95,6 +121,10 @@ public class QCResult {
 
     public Double getPassingReadsPercent() {
         return passingReadsPercent;
+    }
+
+    public Integer getTotalReads() {
+        return totalReads;
     }
 
     public String getStatus() {
