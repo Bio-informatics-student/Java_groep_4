@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * OutputWriter writes QC results to the terminal
@@ -146,7 +147,7 @@ public class OutputWriter {
     ) {
         StringBuilder header = new StringBuilder();
 
-        header.append("Sample\tType");
+        header.append("Sample\tType\tTotal Reads");
 
         if (showAll || showQuality) {
             header.append("\tBeginning Quality\tEnding Quality");
@@ -204,7 +205,9 @@ public class OutputWriter {
 
         output.append(result.getSample())
                 .append("\t")
-                .append(result.getFileType());
+                .append(result.getFileType())
+                .append("\t")
+                .append(result.getTotalReads() == null ? "N/A" : result.getTotalReads());
 
         if (showAll || showQuality) {
             output.append("\t")
@@ -258,6 +261,6 @@ public class OutputWriter {
             return "N/A";
         }
 
-        return value + "%";
+        return String.format(Locale.ROOT, "%.2f%%", value);
     }
 }
