@@ -1,8 +1,6 @@
-
 <div align="center">
 
-<img src="docs/images/seqspectre-logo.jpg.jpg" alt="SeqSpectre logo" width="280">
-
+<img src="docs/images/seqspectre-logo.jpg" alt="SeqSpectre logo" width="280">
 
 # SeqSpectre
 
@@ -10,7 +8,7 @@
 
 **Analyse sequencing data with confidence.**
 
-A Java-based command-line application for analysing FASTQ sequencing data, evaluating read quality and generating QC reports.
+A Java command-line application for FASTQ sequencing quality control, sequence analysis and TSV reporting.
 
 ![Java](https://img.shields.io/badge/Java-26.0.2.1-007396)
 ![Gradle](https://img.shields.io/badge/Gradle-9.7.1-02303A)
@@ -34,71 +32,70 @@ A Java-based command-line application for analysing FASTQ sequencing data, evalu
 
 ## Welcome to SeqSpectre
 
-SeqSpectre is a Java-based bioinformatics application designed to perform quality control on FASTQ sequencing data.
+SeqSpectre is a Java-based bioinformatics application developed to perform quality control on FASTQ sequencing data.
 
-The application analyses sequencing reads, evaluates sequencing quality, detects duplicate sequences and generates reports to help users assess the quality of their datasets.
+The application analyses sequencing reads, evaluates base-call quality at both read ends, identifies duplicate sequences and generates tab-separated QC reports.
 
-SeqSpectre supports both individual FASTQ files and directories containing multiple FASTQ files.
+Users can analyse a single FASTQ file or multiple FASTQ files located within one directory.
 
 ### Key Features
 
-- **FASTQ support** — Process `.fastq`, `.fq`, `.fastq.gz` and `.fq.gz` files.
-- **Read-end quality analysis** — Analyse a configurable percentage of bases at the beginning and end of sequencing reads.
-- **Duplicate detection** — Calculate the percentage of identical nucleotide sequences.
-- **GC content analysis** — Calculate the percentage of guanine and cytosine bases.
-- **Sequence length analysis** — Determine minimum and maximum read lengths.
-- **Length filtering** — Exclude reads shorter than a user-defined minimum length.
-- **Customizable QC thresholds** — Configure Phred scores, duplicate limits and passing-read requirements.
-- **PASS/FAIL classification** — Determine whether samples meet the selected QC requirements.
-- **TSV reporting** — Export results to a tab-separated file for further analysis.
+- **FASTQ input** — Support for `.fastq`, `.fq`, `.fastq.gz` and `.fq.gz` files.
+- **Read-end quality** — Analyse a configurable percentage of bases at the beginning and end of reads.
+- **Duplicate detection** — Calculate the percentage of exact duplicate sequences.
+- **GC content** — Calculate the percentage of G and C nucleotides.
+- **Sequence length** — Report minimum and maximum read lengths.
+- **Length filtering** — Exclude reads shorter than a configurable minimum.
+- **Read counting** — Report the total number of reads in the original FASTQ file.
+- **Configurable thresholds** — Adjust Phred quality, passing-read and duplicate requirements.
+- **PASS/FAIL classification** — Evaluate samples against configured QC requirements.
+- **TSV reporting** — Display results in the terminal and save them as tab-separated values.
+- **Customizable output** — Select individual QC measurements to include in reports.
 
 ---
 
 ## Quick Start
 
-### 1. Requirements
+### Requirements
 
-SeqSpectre has been developed and successfully executed using:
+The application has been executed successfully using the following development environment:
 
-| Component | Tested environment |
+| Component | Tested version |
 |---|---|
 | Java | OpenJDK 26.0.2.1 |
 | Gradle | 9.7.1 |
-| Operating system | Windows 11 |
+| Operating system | Windows 11 (64-bit) |
 | Gradle Launcher JVM | 26.0.2.1 |
 | Gradle Daemon JVM | 26.0.2.1 |
 
-A compatible Java Development Kit (JDK) must be installed.
+A compatible Java Development Kit is required to build the application.
 
-The project includes the Gradle Wrapper, so a separate Gradle installation is not required.
+The Gradle Wrapper is included, so Gradle does not need to be installed separately.
 
-**Note:** Java 26.0.2.1 is the verified development version. Compatibility with older JDK versions and other operating systems has not yet been established by project-specific testing.
+Compatibility with older Java versions or other operating systems has not been established through project-specific testing.
 
-For detailed requirements, see the [Installation Guide](docs/installation.md).
-
-### 2. Clone the repository
+### 1. Download the project
 
 ```bash
 git clone https://github.com/Bio-informatics-student/Java_groep_4.git
-```
-
-Navigate to the project directory:
-
-```bash
 cd Java_groep_4
 ```
 
-### 3. Build SeqSpectre
+Alternatively, select **Code → Download ZIP** on GitHub and extract the repository.
+
+### 2. Build the application
 
 **Windows:**
 
 ```powershell
+.\gradlew.bat build
 .\gradlew.bat shadowJar
 ```
 
 **macOS/Linux:**
 
 ```bash
+./gradlew build
 ./gradlew shadowJar
 ```
 
@@ -108,9 +105,9 @@ The executable JAR is generated at:
 build/libs/seqspectre-all.jar
 ```
 
-### 4. Run your first analysis
+### 3. Run your first analysis
 
-The repository includes a small example FASTQ file containing four sequencing reads.
+The repository includes `testdata/test.fastq`, containing four sequencing reads.
 
 **Windows:**
 
@@ -124,7 +121,7 @@ java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 ```
 
-The application displays QC results in the terminal and creates a file named `results.tsv`.
+SeqSpectre processes the input and writes the results to `results.tsv`, unless another output path is specified.
 
 For detailed instructions, see the [Installation Guide](docs/installation.md).
 
@@ -132,28 +129,29 @@ For detailed instructions, see the [Installation Guide](docs/installation.md).
 
 ## Example QC Results
 
-The following results were generated by analysing the included `test.fastq` example file using SeqSpectre's default settings.
+The included example FASTQ file contains four reads of 16 bases each.
+
+With the default analysis settings, the calculated results are:
 
 | QC Measurement | Result |
 |---|---|
 | Sample | `test.fastq` |
-| File Type | FASTQ |
-| Beginning Quality | 100.0% |
-| Ending Quality | 100.0% |
-| Duplicates | 0.0% |
+| Type | FASTQ |
+| Total Reads | 4 |
+| Beginning Quality | 100.00% |
+| Ending Quality | 100.00% |
+| Duplicates | 0.00% |
 | GC Percentage | 43.75% |
-| Minimum Sequence Length | 16 |
-| Maximum Sequence Length | 16 |
-| Passing Reads | 100.0% |
+| Minimum Length | 16 |
+| Maximum Length | 16 |
+| Passing Reads | 100.00% |
 | Final Status | **PASS** |
 
-The example file contains four reads of 16 nucleotides each.
+The values above reflect the current calculation and output-formatting logic. The committed `results.tsv` files may contain output from an older application version.
 
-All four reads meet the default quality requirements, and no duplicate sequences were detected.
+**Important:** Four sequencing reads are sufficient for demonstrating the application but are not representative of a complete sequencing experiment.
 
-This example demonstrates the application workflow. A dataset containing only four reads is not representative of a complete sequencing experiment.
-
-For more information about the calculations and interpretation, see the [User Guide](docs/user-guide.md).
+See the [User Guide](docs/user-guide.md) for an explanation of the results.
 
 ---
 
@@ -164,39 +162,61 @@ For more information about the calculations and interpretation, see the [User Gu
 
 ### Getting Started
 
-- [Installation Guide](docs/installation.md) — System requirements, Java installation, building and running SeqSpectre.
-- [User Guide](docs/user-guide.md) — Step-by-step instructions for analysing sequencing data and interpreting results.
-- [CLI Command Reference](docs/commands.md) — All available command-line arguments, accepted values and usage examples.
+- [Installation Guide](docs/installation.md) — Requirements, installation, building and running SeqSpectre.
+- [User Guide](docs/user-guide.md) — Analysing FASTQ files, configuring quality control and interpreting results.
+- [CLI Command Reference](docs/commands.md) — Supported command-line arguments, accepted values and examples.
 
 ### Development
 
-- [Developer Guide](docs/developer-guide.md) — Project architecture, Java classes, testing, dependencies and development workflow.
-- [Troubleshooting Guide](docs/troubleshooting.md) — Common errors, installation problems and possible solutions.
+- [Developer Guide](docs/developer-guide.md) — Architecture, Java classes, algorithms, dependencies and testing.
+- [Troubleshooting Guide](docs/troubleshooting.md) — Common errors and recommended solutions.
+- [UML Diagram](SeqSpectre_UML.puml) — Project UML source.
 
 ### Support & Feedback
 
-- [Contact & Support](docs/contact.md) — General questions, bug reports and suggestions.
-- [GitHub Issues](https://github.com/Bio-informatics-student/Java_groep_4/issues) — Report a problem or propose an improvement.
+- [Contact & Support](docs/contact.md) — Questions, bug reports and improvement suggestions.
+- [GitHub Issues](https://github.com/Bio-informatics-student/Java_groep_4/issues) — Report a problem or request a feature.
 
 </details>
 
 ---
 
-## Technologies
+## Understanding the QC Analysis
 
-SeqSpectre uses the following technologies:
+SeqSpectre performs the following analyses:
+
+| Analysis | Description |
+|---|---|
+| Total Reads | Counts FASTQ records before optional length filtering |
+| Beginning Quality | Percentage of selected bases at read beginnings meeting the Phred threshold |
+| Ending Quality | Percentage of selected bases at read ends meeting the Phred threshold |
+| Duplicates | Percentage of repeated, identical read sequences |
+| GC Percentage | Percentage of G and C bases across analysed reads |
+| Minimum Length | Shortest analysed read length after optional filtering |
+| Maximum Length | Longest original read length |
+| Passing Reads | Percentage of analysed reads passing the quality requirements at both ends |
+
+When no minimum length is specified, the minimum and maximum lengths are calculated from the same original dataset.
+
+When `--min-length` is specified, shorter reads are excluded from the subsequent QC calculations. The minimum length is updated using the remaining reads, while the maximum length remains the value calculated from the original file.
+
+The final `PASS` or `FAIL` classification depends on the required passing-read percentage and maximum allowed duplicate percentage.
+
+For detailed mathematical explanations, see the [Developer Guide](docs/developer-guide.md).
+
+---
+
+## Technologies
 
 | Technology | Version | Purpose |
 |---|---|---|
 | Java / OpenJDK | 26.0.2.1 (tested) | Application development and execution |
-| Gradle | 9.7.1 | Build automation and dependency management |
+| Gradle | 9.7.1 | Build automation |
 | PicoCLI | 4.7.7 | Command-line argument parsing |
-| JUnit Jupiter | 5.11.4 | Automated unit testing |
-| Gradle Shadow Plugin | 9.6.1 | Creating an executable JAR |
+| JUnit Jupiter | 5.11.4 | Automated testing |
+| Gradle Shadow plugin | 9.6.1 | Executable JAR packaging |
 
-The main dependencies are managed in `build.gradle`.
-
-For more information, see the [Developer Guide](docs/developer-guide.md).
+The complete dependency configuration is available in `build.gradle`.
 
 ---
 
@@ -207,7 +227,7 @@ Java_groep_4/
 ├── README.md
 ├── docs/
 │   ├── images/
-│   │   └── seqspectre-logo.jpg
+│   │   └── seqspectre-logo.jpg.jpg
 │   ├── installation.md
 │   ├── user-guide.md
 │   ├── commands.md
@@ -215,68 +235,51 @@ Java_groep_4/
 │   ├── troubleshooting.md
 │   └── contact.md
 ├── src/
-│   ├── main/
-│   │   └── java/
-│   │       ├── Main.java
-│   │       ├── input/
-│   │       ├── processing/
-│   │       └── output/
-│   └── test/
-│       └── java/
+│   ├── main/java/
+│   │   ├── Main.java
+│   │   ├── input/
+│   │   ├── processing/
+│   │   └── output/
+│   └── test/java/
+│       ├── input/
+│       ├── processing/
+│       └── output/
 ├── testdata/
 │   └── test.fastq
 ├── SeqSpectre_UML.puml
 ├── build.gradle
 ├── settings.gradle
+├── gradle/
 ├── gradlew
 └── gradlew.bat
 ```
 
 ---
 
-## Current Support and Limitations
+## Current Limitations
 
-SeqSpectre currently supports quality control analysis of FASTQ sequencing data.
-
-The application can process:
-
-- Standard FASTQ files.
-- Gzip-compressed FASTQ files.
-- Individual FASTQ files.
-- Multiple FASTQ files within the same directory.
-
-The project also contains components for detecting SAM, BAM and FastQC files, but their parsing and analysis are not yet implemented.
-
-Other limitations include:
-
-- Directory scanning is not recursive.
-- Duplicate detection uses exact nucleotide sequence matches.
-- The final PASS/FAIL status depends on passing-read percentage and duplicate percentage.
-- The current processing implementation loads FASTQ records into memory.
-
-For a detailed technical overview, see the [Developer Guide](docs/developer-guide.md).
+- The complete analysis pipeline currently supports FASTQ input only.
+- SAM, BAM and FastQC reader implementations are not yet available.
+- FASTQ directory scanning is not recursive.
+- FASTQ records are loaded into memory before analysis.
+- Duplicate detection identifies exact sequence matches only.
+- GC content and sequence length do not independently determine PASS/FAIL.
+- The command-line application is internally named `qc-tool`.
+- A formal application release version has not been configured.
 
 ---
 
 ## Contact & Support
 
-Have a question about SeqSpectre, encountered an unexpected error or want to suggest a new feature?
+Questions, bugs and improvement suggestions can be submitted using the project's GitHub Issues page.
 
-We welcome feedback and suggestions through the repository.
-
-- [Contact & Support Guide](docs/contact.md)
-- [Report a Bug](https://github.com/Bio-informatics-student/Java_groep_4/issues)
-- [Suggest a Feature](https://github.com/Bio-informatics-student/Java_groep_4/issues)
-
-Please check the documentation and existing issues before submitting a new request.
+[Contact & Support Guide](docs/contact.md) · [GitHub Issues](https://github.com/Bio-informatics-student/Java_groep_4/issues)
 
 ---
 
 ## Development Team
 
-SeqSpectre was developed as a software development project within the **Bioinformatics programme at Hanze University of Applied Sciences**.
-
-The project uses Java, Gradle and automated unit testing to support the development of a modular sequencing quality control application.
+SeqSpectre was developed as an educational software development project within the **Bioinformatics programme at Hanze University of Applied Sciences**.
 
 ---
 

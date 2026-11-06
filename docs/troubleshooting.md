@@ -2,118 +2,71 @@
 
 This guide helps resolve common problems when installing, running or using SeqSpectre.
 
-[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [CLI Commands](commands.md) · [Developer Guide](developer-guide.md)
+[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [CLI Commands](commands.md) · [Developer Guide](developer-guide.md) · [Contact & Support](contact.md)
 
-## 1. Installation problems
+---
+
+## 1. Installation Problems
 
 ### Java is not recognized
 
-**Problem**
+**Possible cause:** Java is not installed or is not available through the system PATH.
 
-The terminal displays:
-
-```text
-'java' is not recognized as an internal or external command
-```
-
-Or:
-
-```text
-command not found: java
-```
-
-**Possible cause**
-
-Java is not installed or is not available through the system's PATH environment variable.
-
-**Solution**
-
-Check the Java installation:
+Check:
 
 ```bash
 java -version
-```
-
-Check the Java compiler:
-
-```bash
 javac -version
 ```
 
-If these commands fail, install a compatible JDK and reopen your terminal.
+Install a compatible JDK and reopen the terminal.
 
-If using IntelliJ IDEA, also verify that the Gradle JVM is configured correctly.
+The verified development environment uses OpenJDK 26.0.2.1.
 
-### Gradle Wrapper does not start
+### Gradle does not start
 
-**Windows**
+Make sure the terminal is opened in the repository root.
 
-Make sure you are in the root directory of the project.
-
-Run:
-
-```powershell
-.\gradlew.bat build
-```
-
-**macOS/Linux**
-
-If the terminal displays a permission error, execute:
-
-```bash
-chmod +x gradlew
-```
-
-Then:
-
-```bash
-./gradlew build
-```
-
-### Gradle cannot download dependencies
-
-**Possible causes**
-
-- No internet connection.
-- Firewall restrictions.
-- Proxy configuration problems.
-- Temporary unavailability of a dependency repository.
-
-**Solution**
-
-Verify your internet connection and retry the build.
-
-The first build may need to download Gradle and the application's dependencies.
-
-### Incompatible Java version
-
-Check which Java version is installed:
-
-```bash
-java -version
-```
-
-Check which JVM Gradle uses:
+Windows:
 
 ```powershell
 .\gradlew.bat --version
 ```
 
-Use a JDK compatible with the Gradle version included in the repository.
+macOS/Linux:
+
+```bash
+./gradlew --version
+```
+
+If permission is denied on macOS/Linux:
+
+```bash
+chmod +x gradlew
+```
+
+The included Gradle Wrapper uses version 9.7.1.
+
+### Gradle cannot download dependencies
+
+Possible causes:
+
+- No internet connection.
+- Firewall restrictions.
+- Proxy configuration problems.
+- Temporary repository availability issues.
+
+Verify connectivity and retry the build.
 
 ### Unable to access JAR file
 
-**Problem**
+**Problem:**
 
 ```text
 Error: Unable to access jarfile
 ```
 
-**Possible cause**
-
-The executable JAR does not exist or the specified path is incorrect.
-
-**Solution**
+**Solution:**
 
 Build the executable JAR:
 
@@ -121,25 +74,63 @@ Build the executable JAR:
 .\gradlew.bat shadowJar
 ```
 
-Check whether this file exists:
+Verify that the generated file exists:
 
 ```text
 build/libs/seqspectre-all.jar
 ```
 
-Run the application again.
+## 2. Outdated Application Output
 
-## 2. Command-line problems
+### The Total Reads column is missing
 
-### Missing input argument
+The current application includes a `Total Reads` column.
 
-**Problem**
+If it is missing, you may be running an older JAR or reading an older report file.
 
-SeqSpectre reports that the required input option is missing.
+Rebuild the application:
 
-**Solution**
+```powershell
+.\gradlew.bat clean shadowJar
+```
 
-Supply a FASTQ file or directory using `-i` or `--input`.
+Then execute:
+
+```powershell
+java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq -o updated-results.tsv
+```
+
+The current output should include:
+
+```text
+Sample
+Type
+Total Reads
+```
+
+as the first three column names.
+
+### Percentages use one decimal place
+
+The current `OutputWriter` formats percentages to two decimal places.
+
+Expected examples:
+
+```text
+100.00%
+0.00%
+43.75%
+```
+
+If your output uses `100.0%`, regenerate the report using the latest built application.
+
+The existing `results.tsv` and `test-results.tsv` files committed to GitHub may contain output from an earlier version.
+
+## 3. Command-Line Problems
+
+### Missing required input
+
+A normal analysis requires `-i` or `--input`.
 
 Example:
 
@@ -147,116 +138,53 @@ Example:
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 ```
 
-### Unknown command-line option
+### Unknown option
 
-**Possible cause**
-
-The argument is misspelled or is not supported.
-
-**Solution**
-
-Display all available options:
+Check the available arguments:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar --help
 ```
 
-Check the spelling of each argument.
+Quality selection flags such as `--gc` do not require a value.
 
-For example:
+Numerical options such as `--end-percent` do require a value.
 
-```text
---end-percent 20
-```
+### Paths containing spaces
 
-requires a numerical value.
-
-However:
-
-```text
---quality
-```
-
-is a flag and does not require a value.
-
-### File paths containing spaces
-
-Paths containing spaces must be placed between double quotation marks.
-
-Windows example:
+Enclose paths in double quotation marks.
 
 ```powershell
-java -jar build\libs\seqspectre-all.jar -i "C:\Sequencing data\test.fastq"
+java -jar build\libs\seqspectre-all.jar -i "C:\Sequencing Data\sample.fastq"
 ```
 
-### Invalid numerical settings
+### Invalid numerical arguments
 
-SeqSpectre validates the allowed ranges for numerical arguments.
-
-| Option | Valid range |
+| Argument | Allowed values |
 |---|---|
 | `--end-percent` | 1–50 |
 | `--required-reads-percent` | 0–100 |
 | `--max-duplicate-percent` | 0–100 |
 | `--min-quality-score` | Integer 0–93 |
-| `--min-length` | Integer of at least 1 |
+| `--min-length` | Integer ≥1 |
 
-For fractional percentages, use a decimal point:
+Use a decimal point instead of a comma for fractional percentages.
 
-```text
---end-percent 12.5
-```
-
-Do not use:
-
-```text
---end-percent 12,5
-```
-
-Invalid values are rejected.
-
-## 3. Input file problems
+## 4. Input File Problems
 
 ### Input path does not exist
 
-**Problem**
+Verify the file location.
 
-```text
-Input path does not exist
-```
-
-**Possible cause**
-
-The specified file or directory cannot be found.
-
-**Solution**
-
-Check the spelling and location of the input path.
-
-When starting the program from the repository root, the example FASTQ file is:
+The included example is:
 
 ```text
 testdata/test.fastq
 ```
 
+Relative paths are resolved from the terminal's working directory.
+
 ### No FASTQ files found
-
-**Problem**
-
-```text
-No FASTQ files found in:
-```
-
-**Possible causes**
-
-- The directory is empty.
-- The directory contains no supported FASTQ files.
-- The FASTQ files are located inside nested subdirectories.
-- An unsupported file format was supplied.
-
-**Solution**
-
-Make sure the directory directly contains at least one supported file.
 
 Supported extensions:
 
@@ -267,45 +195,35 @@ Supported extensions:
 .fq.gz
 ```
 
-SAM, BAM and FastQC files are not currently processed by the command-line workflow.
+The application does not recursively search nested subdirectories.
+
+SAM, BAM and FastQC inputs are not currently processed by the complete CLI workflow.
 
 ### Invalid FASTQ header
 
-**Problem**
-
-```text
-Invalid FASTQ header
-```
-
-**Possible cause**
-
-A FASTQ record does not start with `@`.
-
-**Solution**
-
-Check the first line of the affected record.
+Every FASTQ record must begin with a header starting with `@`.
 
 Example:
 
 ```text
-@read1
+@read001
 ```
 
 ### Invalid FASTQ separator
 
-**Problem**
+The third line must start with `+`.
 
-```text
-Invalid FASTQ separator
-```
+### Incomplete FASTQ record
 
-**Possible cause**
+FASTQ records must contain four complete lines.
 
-The third line of a FASTQ record does not start with `+`.
+A truncated file may cause an error.
 
-**Solution**
+### Sequence and quality lengths differ
 
-Check the FASTQ structure:
+Every nucleotide must have one corresponding quality character.
+
+For example:
 
 ```text
 @read1
@@ -314,153 +232,115 @@ ACGTACGT
 IIIIIIII
 ```
 
-### Incomplete FASTQ record
-
-**Problem**
-
-```text
-Incomplete FASTQ record
-```
-
-**Possible cause**
-
-The file ends before a complete four-line FASTQ record has been read.
-
-**Solution**
-
-Check whether the file was truncated or contains missing lines.
-
-Every record must contain exactly four lines.
-
-### Sequence and quality lengths differ
-
-**Problem**
-
-```text
-Sequence and quality lengths differ
-```
-
-**Possible cause**
-
-The nucleotide sequence and corresponding quality string contain different numbers of characters.
-
-**Solution**
-
-Check the second and fourth lines of the FASTQ record.
-
-Every base must have one corresponding quality character.
-
 ### Invalid Phred+33 character
 
-**Problem**
+The current quality analyser accepts printable ASCII characters with values from 33 through 126.
 
-```text
-Invalid Phred+33 character
-```
+Verify the FASTQ quality encoding and check for corrupted characters.
 
-**Possible cause**
+### Compressed file cannot be read
 
-A quality string contains a character outside the accepted Phred+33 range.
+Make sure the file is actually gzip-compressed.
 
-**Solution**
+Renaming a regular FASTQ file to `.fastq.gz` does not compress its contents.
 
-Verify that the FASTQ file uses Phred+33 encoding and has not been corrupted.
+## 5. Minimum Length Filtering
 
-The accepted quality character range is printable ASCII 33–126.
+### All reads were removed
 
-### FASTQ file is empty
-
-**Problem**
-
-```text
-FASTQ file is empty
-```
-
-**Solution**
-
-Supply a FASTQ file containing at least one complete record.
-
-### Compressed FASTQ cannot be processed
-
-**Possible cause**
-
-The file is not a valid gzip-compressed FASTQ file, even though its filename ends in `.gz`.
-
-**Solution**
-
-Check that the file is correctly compressed and not damaged.
-
-Renaming a regular FASTQ file to `.fastq.gz` does not compress the file.
-
-## 4. Filtering problems
-
-### No reads meet the required minimum length
-
-**Problem**
+**Problem:**
 
 ```text
 No reads meet the required minimum length
 ```
 
-**Possible cause**
+If every read is shorter than the specified threshold, QC processing stops.
 
-All reads are shorter than the value supplied using `--min-length`.
+For example, the included test file contains reads of length 16.
 
-**Example**
-
-The repository's `test.fastq` contains four reads of 16 bases each.
-
-This command works:
+This works:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 16
 ```
 
-This command removes all four reads:
+This removes every read:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 100
 ```
 
-**Solution**
+Choose a lower threshold or use another dataset.
 
-Choose a lower minimum length or supply a dataset containing longer reads.
+### Total Reads does not decrease after filtering
 
-## 5. Understanding unexpected results
+This is expected.
 
-### Why does my sample receive FAIL?
+`Total Reads` counts the original FASTQ records before filtering.
 
-The final status depends on two requirements:
+The filtered records are used for subsequent QC calculations, but the original count remains available for reporting.
+
+### Minimum Length changes after filtering
+
+This is also expected.
+
+The current processor recalculates `Minimum Length` using the reads that remain after optional length filtering.
+
+Example:
+
+```text
+Original lengths:
+50, 80, 100, 150
+
+--min-length 90
+
+Reported Minimum Length:
+100
+```
+
+### Maximum Length does not change after filtering
+
+The current implementation retains the original maximum read length.
+
+Because the filter only removes reads shorter than the specified minimum, the original maximum will also remain among the retained reads whenever filtering succeeds.
+
+### Percentage below minimum is missing
+
+Use both `--min-length` and `--length`:
+
+```bash
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length
+```
+
+The report then includes `% Reads Below Minimum Length`.
+
+## 6. Understanding QC Results
+
+### Why did my sample receive FAIL?
+
+A sample receives PASS only when:
 
 ```text
 Passing Reads >= required-reads-percent
+
 AND
+
 Duplicates <= max-duplicate-percent
 ```
 
-If either condition is not met, the sample receives `FAIL`.
-
-A sample may have high average quality values but still fail if too few individual reads pass both end-quality requirements.
+If either requirement is not satisfied, the final status is FAIL.
 
 ### Why are Beginning Quality and Passing Reads different?
 
-`Beginning Quality` describes the percentage of selected bases at the beginning of reads that meet the quality threshold.
+`Beginning Quality` describes the percentage of selected bases at the beginnings of reads meeting the Phred threshold.
 
-`Passing Reads` describes the percentage of complete reads that pass the required quality checks at both ends.
+`Passing Reads` describes the percentage of complete analysed reads meeting the requirements at both read ends.
 
-These percentages represent different measurements and do not necessarily have the same value.
+These are different measurements and can have different values.
 
-### Why do sequence lengths remain unchanged after filtering?
+### Why do I see fewer columns?
 
-Minimum and maximum sequence lengths are calculated before the optional minimum-length filter is applied.
-
-The original lengths are retained in the report.
-
-Other QC measurements are calculated using the reads remaining after filtering.
-
-### Why are some columns missing?
-
-If one or more display flags are provided, SeqSpectre shows only the selected measurement columns.
+The output selection flags determine which measurement columns are included.
 
 For example:
 
@@ -468,112 +348,107 @@ For example:
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --gc
 ```
 
-shows GC percentage alongside the mandatory sample, type and final status columns.
+displays:
 
-To display all available measurements, do not specify any of the five display flags.
-
-### Why is the percentage below minimum length missing?
-
-The `% Reads Below Minimum Length` column is displayed only when a minimum length is specified and length statistics are included in the report.
-
-Example:
-
-```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length
+```text
+Sample
+Type
+Total Reads
+GC Percentage
+Final Status
 ```
 
-## 6. Output problems
+To display all measurements, omit the selection flags.
+
+### Why is GC percentage not changing PASS/FAIL?
+
+GC percentage is currently descriptive.
+
+The final sample status depends on passing-read and duplicate thresholds only.
+
+## 7. Output Problems
 
 ### Output path points to a directory
 
-**Problem**
+Use a filename rather than an existing directory.
 
-```text
-Output path points to a directory, not a file
-```
-
-**Solution**
-
-Specify an output filename rather than only a directory.
-
-Example:
+Correct:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/results.tsv
 ```
 
-### Could not create output directory
+### Output directory cannot be created
 
-**Possible cause**
-
-The application does not have permission to create the selected directory.
-
-**Solution**
-
-Choose an output location where you have write permission.
-
-Try placing the output inside your project directory.
+Choose a location where you have write permission.
 
 ### Cannot find results.tsv
 
-By default, SeqSpectre writes `results.tsv` to the current working directory.
+The default report is written relative to the current working directory.
 
-This is not necessarily the directory containing the FASTQ input.
-
-Specify an explicit output path when necessary:
+Specify an explicit output path to avoid confusion:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/results.tsv
 ```
 
-### Previous results have disappeared
+### Previous results disappeared
 
-SeqSpectre overwrites an existing output file when the same path is used.
+SeqSpectre overwrites an existing output file with the same path.
 
-To preserve previous reports, provide a different output filename for each analysis.
+Use separate filenames to preserve previous analyses.
 
-## 7. Diagnostic checklist
+## 8. Interactive Terminal Behaviour
 
-Before reporting a problem, verify the following:
+The application includes a hidden developer-only option:
+
+```text
+--bart-mode
+```
+
+When this option is enabled, SeqSpectre asks an additional question after successful QC processing.
+
+If the application appears to be awaiting user input after completing the analysis, check whether this option was supplied.
+
+When running through Gradle, standard input is forwarded to the application using the configured `run` task.
+
+The hidden option is not part of normal FASTQ quality control and does not change the generated QC report.
+
+## 9. Diagnostic Checklist
+
+Before reporting an issue, verify that:
 
 1. Java is installed and recognized by the terminal.
-2. The terminal is opened in the correct directory.
-3. The application has been compiled successfully.
-4. The executable JAR exists.
-5. The input path is valid.
-6. The FASTQ file has a supported extension.
-7. The FASTQ records contain valid sequence and quality information.
-8. Numerical arguments are within their permitted ranges.
-9. The output directory is writable.
-10. The problem can be reproduced using `testdata/test.fastq`.
+2. The terminal is opened in the project directory.
+3. Gradle uses a compatible JDK.
+4. The latest JAR has been built.
+5. The input path exists.
+6. The FASTQ extension is supported.
+7. The FASTQ records contain valid data.
+8. Numerical arguments are within the allowed ranges.
+9. The minimum-length filter leaves at least one read.
+10. The output directory is writable.
+11. The error can be reproduced with a small test dataset.
 
-## 8. Reporting issues
+## 10. Reporting Issues
 
-If a problem cannot be resolved, it can be reported through the project's GitHub repository.
+Report problems through the [SeqSpectre GitHub Issues page](https://github.com/Bio-informatics-student/Java_groep_4/issues).
 
-[SeqSpectre GitHub Repository](https://github.com/Bio-informatics-student/Java_groep_4)
-
-When reporting a problem, include:
+Include:
 
 - Operating system.
 - Java version.
-- Command used to run SeqSpectre.
-- Relevant error message.
+- Exact command used.
+- Input format.
 - Expected behaviour.
 - Actual behaviour.
-- Steps required to reproduce the problem.
+- Relevant error message.
+- Steps required to reproduce the issue.
 
-If possible, include a small example FASTQ file containing non-sensitive test data.
+Do not upload confidential or personally identifiable sequencing data to public issues.
 
-Do not publish confidential or identifiable sequencing data.
+For more information, see the [Contact & Support Guide](contact.md).
 
 ---
-
-## Further documentation
-
-- [Installation Guide](installation.md)
-- [User Guide](user-guide.md)
-- [CLI Command Reference](commands.md)
-- [Developer Guide](developer-guide.md)
 
 [Back to SeqSpectre Home](../README.md)
