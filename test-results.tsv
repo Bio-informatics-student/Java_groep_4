@@ -1,0 +1,2 @@
+Sample	Type	Beginning Quality	Ending Quality	Duplicates	GC Percentage	Minimum Length	Maximum Length	Passing Reads	Final Status
+test.fastq	FASTQ	100.0%	100.0%	0.0%	43.75%	16	16	100.0%	PASS

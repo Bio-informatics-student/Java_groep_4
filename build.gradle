@@ -31,3 +31,7 @@ tasks.named('shadowJar') {
 test {
     useJUnitPlatform()
 }
+
+tasks.named('run', JavaExec) {
+    standardInput = System.in
+}
