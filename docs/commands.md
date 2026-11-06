@@ -1,12 +1,14 @@
 # CLI Command Reference
 
-This page documents all available command-line options in SeqSpectre.
+This page documents the command-line interface of SeqSpectre, including input options, QC settings, reporting options and accepted values.
 
-[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [Developer Guide](developer-guide.md) · [Troubleshooting](troubleshooting.md)
+[Home](../README.md) · [Installation](installation.md) · [User Guide](user-guide.md) · [Developer Guide](developer-guide.md) · [Troubleshooting](troubleshooting.md) · [Contact & Support](contact.md)
 
-## 1. Command syntax
+---
 
-After building the executable JAR, run:
+## 1. Command Syntax
+
+After building the executable JAR:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i <FASTQ_FILE_OR_DIRECTORY> [OPTIONS]
@@ -18,187 +20,225 @@ Windows example:
 java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq
 ```
 
-The `-i` or `--input` argument is required. Other options are optional and may be combined.
+The input argument is required for a normal analysis. Optional arguments may be combined.
 
 Paths containing spaces must be enclosed in double quotation marks.
 
-## 2. Complete command reference
+## 2. Complete Command Reference
 
 | Option | Default | Allowed values | Description |
 |---|---|---|---|
-| `-i`, `--input` | Required | Existing file or directory | Input FASTQ file or folder |
-| `-o`, `--output` | `results.tsv` | Writable file path | Location of output report |
+| `-i`, `--input` | Required | Existing FASTQ file or directory | Input location |
+| `-o`, `--output` | `results.tsv` | Writable file path | Output report location |
 | `--end-percent` | `10` | 1–50 | Percentage analysed at each read end |
-| `--required-reads-percent` | `80` | 0–100 | Minimum percentage of reads that must pass |
-| `--max-duplicate-percent` | `100` | 0–100 | Maximum duplicate percentage allowed |
-| `--min-quality-score` | `30` | Integer 0–93 | Minimum Phred score per base |
-| `--min-length` | Not set | Integer ≥1 | Exclude reads shorter than this length |
-| `--quality` | Off | Flag | Show beginning and ending quality |
-| `--duplicates` | Off | Flag | Show duplicate percentage |
-| `--gc` | Off | Flag | Show GC percentage |
-| `--length` | Off | Flag | Show minimum and maximum read lengths |
-| `--passing-reads` | Off | Flag | Show percentage of passing reads |
-| `-h`, `--help` | — | Flag | Show command-line help |
-| `-V`, `--version` | — | Flag | Request version information; a release version is not currently configured |
+| `--required-reads-percent` | `80` | 0–100 | Minimum percentage of passing reads |
+| `--max-duplicate-percent` | `100` | 0–100 | Maximum duplicate percentage |
+| `--min-quality-score` | `30` | Integer 0–93 | Minimum Phred score |
+| `--min-length` | Not set | Integer ≥1 | Minimum read length |
+| `--quality` | Off | Flag | Display read-end quality |
+| `--duplicates` | Off | Flag | Display duplicate percentage |
+| `--gc` | Off | Flag | Display GC percentage |
+| `--length` | Off | Flag | Display sequence length measurements |
+| `--passing-reads` | Off | Flag | Display percentage of passing reads |
+| `-h`, `--help` | — | Flag | Display command-line help |
+| `-V`, `--version` | — | Flag | Request version information |
 
-The five display flags control which results are shown. They do not disable the underlying calculations.
+The application currently has no explicit release version configured in its PicoCLI annotation.
 
-If none of the display flags is specified, all available measurements are shown.
+The source code also contains a hidden developer-only option, documented separately at the end of this page.
 
-## 3. Input and output
+## 3. Input and Output Options
 
-### `-i` / `--input`
+### `-i`, `--input`
 
-Analyse a single file:
+Specifies a single FASTQ file:
 
 ```bash
-java -jar build/libs/seqspectre-all.jar --input testdata/test.fastq
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 ```
 
-Analyse all supported FASTQ files directly inside a directory:
+Or a directory:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata
 ```
 
-Supported extensions:
+Supported formats:
 
-- `.fastq`
-- `.fq`
-- `.fastq.gz`
-- `.fq.gz`
+```text
+.fastq
+.fq
+.fastq.gz
+.fq.gz
+```
 
-Directory scanning is not recursive. FASTQ files inside nested folders are not included.
+Directory scanning is not recursive.
 
-### `-o` / `--output`
+### `-o`, `--output`
 
-Set the output file:
+Specifies the report location.
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/qc.tsv
 ```
 
-The default output is `results.tsv`, located in the current working directory.
+Default:
 
-SeqSpectre attempts to create missing parent directories. If the output file already exists, it is overwritten.
+```text
+results.tsv
+```
 
-TSV is recommended because the report uses tab-separated values.
+Missing parent directories are created when possible.
 
-## 4. Quality analysis settings
+Existing output files are overwritten.
+
+## 4. Quality Analysis Options
 
 ### `--end-percent`
 
-Controls how much of each read end is analysed.
+Controls the percentage of bases analysed independently at the start and end of every read.
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 25
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 20
 ```
 
-The number of bases per end is calculated using:
+Allowed values: 1–50, including decimal percentages.
+
+The number of bases per end is calculated as:
 
 ```text
-ceil(read length × percentage / 100)
+ceil(read length × end percentage / 100)
 ```
 
-For a read containing 16 bases and the default percentage of 10:
+For 16-base reads and the default value of 10%:
 
 ```text
-ceil(16 × 0.10) = 2
+ceil(16 × 0.10) = 2 bases
 ```
-
-Two bases are analysed at the beginning and two at the end.
-
-Decimal values such as `12.5` are accepted. Use a decimal point instead of a comma.
 
 ### `--min-quality-score`
 
-Sets the minimum required Phred score for individual bases.
+Sets the minimum Phred score for an individual base to meet the quality threshold.
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-quality-score 20
 ```
 
-The default is Q30.
+Allowed values: whole numbers from 0 through 93.
 
-SeqSpectre uses Phred+33 encoding. Each read end passes when at least 90% of the analysed bases have a score equal to or higher than the selected threshold.
+Default: Q30.
 
-Both ends must pass for the read to pass.
+A read passes when at least 90% of the selected bases at both ends individually meet the chosen threshold.
 
-The 90% per-end requirement is fixed in the current implementation.
+The 90% requirement within each read end is fixed in the current implementation.
 
 ### `--required-reads-percent`
 
-Determines the minimum percentage of reads that must pass both quality checks.
+Sets the minimum percentage of analysed reads that must pass the quality checks.
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --required-reads-percent 95
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --required-reads-percent 90
 ```
 
-The default is 80%.
+Allowed values: 0–100.
 
-A sample meets its quality requirement if the observed percentage of passing reads is at least the specified value.
+Default: 80.
 
 ### `--max-duplicate-percent`
 
-Determines the maximum allowed percentage of duplicate sequences.
+Sets the maximum permitted duplicate percentage.
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --max-duplicate-percent 10
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --max-duplicate-percent 20
 ```
 
-The default is 100%.
+Allowed values: 0–100.
 
-Duplicate detection uses exact sequence matching.
+Default: 100.
+
+Duplicate sequences are counted using exact nucleotide sequence equality.
 
 Calculation:
 
 ```text
-Duplicate percentage =
-(total reads - unique sequences) / total reads × 100
+Duplicate Percentage =
+(Total Analysed Reads - Unique Sequences)
+/
+Total Analysed Reads
+× 100
 ```
 
-A file fails the duplicate requirement when its duplicate percentage exceeds the specified threshold.
-
-## 5. Sequence length filtering
+## 5. Minimum Length Filtering
 
 ### `--min-length`
 
-Exclude reads shorter than the specified number of bases.
+Excludes reads shorter than the selected minimum.
+
+Example:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12
 ```
 
-When the minimum length is specified:
+Allowed values: positive integers.
 
-1. The original minimum and maximum read lengths are calculated.
-2. The percentage of reads below the minimum is calculated.
-3. Shorter reads are removed.
-4. The remaining reads are used for quality, GC, duplicate and passing-read calculations.
+When filtering is enabled:
 
-Combine `--min-length` with `--length` to display length statistics:
+- `Total Reads` counts the original FASTQ records.
+- `% Reads Below Minimum Length` describes the original reads below the threshold.
+- `Minimum Length` describes the shortest remaining read.
+- `Maximum Length` retains the original maximum read length.
+- Quality, duplicate, GC and passing-read percentages use the remaining reads.
 
-```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length
+If every read is removed, the application reports an error.
+
+### Example
+
+Original read lengths:
+
+```text
+50, 80, 100, 150
 ```
 
-**Important:** All four reads in the example `test.fastq` are 16 bases long. Using `--min-length 100` would remove every read and produce an error.
+With:
 
-## 6. Selecting report columns
+```text
+--min-length 90
+```
 
-| Flag | Output columns |
+the resulting length statistics are:
+
+```text
+Total Reads: 4
+Minimum Length: 100
+Maximum Length: 150
+% Reads Below Minimum Length: 50.00%
+```
+
+## 6. Report Selection Flags
+
+| Flag | Displayed measurements |
 |---|---|
-| `--quality` | `Beginning Quality`, `Ending Quality` |
-| `--duplicates` | `Duplicates` |
-| `--gc` | `GC Percentage` |
-| `--length` | `Minimum Length`, `Maximum Length` |
-| `--passing-reads` | `Passing Reads` |
+| `--quality` | Beginning Quality, Ending Quality |
+| `--duplicates` | Duplicates |
+| `--gc` | GC Percentage |
+| `--length` | Minimum Length, Maximum Length |
+| `--passing-reads` | Passing Reads |
 
-When `--min-length` is set and length statistics are displayed, SeqSpectre also includes `% Reads Below Minimum Length`.
+The following columns are always included:
 
-The columns `Sample`, `Type` and `Final Status` are always included.
+```text
+Sample
+Type
+Total Reads
+Final Status
+```
 
-### Show all results
+When `--min-length` is supplied, the `% Reads Below Minimum Length` column is included if length output is selected.
+
+If no display selection flag is provided, all measurements are displayed.
+
+### Show all measurements
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
@@ -210,7 +250,7 @@ java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --gc
 ```
 
-### Show quality and duplicates
+### Show quality and duplicate percentage
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --quality --duplicates
@@ -222,13 +262,13 @@ java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --quality --dupli
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --passing-reads --gc
 ```
 
-### Show sequence lengths and length filtering information
+### Display sequence lengths after filtering
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --length --min-length 12
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length
 ```
 
-## 7. Complete examples
+## 7. Combined Command Examples
 
 ### Standard analysis
 
@@ -236,110 +276,135 @@ java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --length --min-le
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 ```
 
-This uses all default QC thresholds and displays all measurements.
-
-### Custom quality thresholds
+### Stricter QC requirements
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 20 --min-quality-score 30 --required-reads-percent 90
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 20 --min-quality-score 30 --required-reads-percent 90 --max-duplicate-percent 20
 ```
 
-### Limit duplicate percentage
+### Custom output file
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --max-duplicate-percent 20
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/analysis.tsv
 ```
 
-### Custom output location
+### Minimum length and selected output
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/results.tsv
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length --quality --gc
 ```
 
-### Combined analysis
+### Directory analysis
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/strict.tsv --end-percent 20 --min-quality-score 30 --required-reads-percent 90 --max-duplicate-percent 10 --min-length 12
+java -jar build/libs/seqspectre-all.jar -i testdata -o reports/all_samples.tsv
 ```
 
-This command changes the quality thresholds, applies a minimum length and writes the results to a custom file.
+## 8. Output Format
 
-## 8. Understanding PASS / FAIL
+Results are printed to the terminal and saved as TSV.
 
-SeqSpectre assigns `PASS` only when both requirements are met:
+Percentages are formatted to two decimal places:
 
 ```text
-Passing Reads >= required-reads-percent
-AND
-Duplicates <= max-duplicate-percent
+100.00%
+43.75%
+0.00%
 ```
 
-GC percentage and sequence length are descriptive measurements and do not independently determine PASS or FAIL.
+Read counts and read lengths are displayed as integers.
 
-The minimum length setting filters reads but does not add a third condition to the final PASS/FAIL calculation.
+The default report header is:
 
-## 9. Actual test output
-
-Running:
-
-```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
+```text
+Sample    Type    Total Reads    Beginning Quality    Ending Quality    Duplicates    GC Percentage    Minimum Length    Maximum Length    Passing Reads    Final Status
 ```
 
-produced the following results:
+The actual TSV separates columns using tab characters.
+
+### Example Result
+
+For `testdata/test.fastq`, the expected values using the current application code are:
 
 | Measurement | Value |
 |---|---|
 | Sample | test.fastq |
 | Type | FASTQ |
-| Beginning Quality | 100.0% |
-| Ending Quality | 100.0% |
-| Duplicates | 0.0% |
+| Total Reads | 4 |
+| Beginning Quality | 100.00% |
+| Ending Quality | 100.00% |
+| Duplicates | 0.00% |
 | GC Percentage | 43.75% |
 | Minimum Length | 16 |
 | Maximum Length | 16 |
-| Passing Reads | 100.0% |
+| Passing Reads | 100.00% |
 | Final Status | PASS |
 
-The file contains four reads with 16 bases per read.
+## 9. PASS / FAIL Criteria
 
-These results were obtained using SeqSpectre's default settings.
+The sample receives `PASS` when both conditions are satisfied:
 
-## 10. Running through Gradle
+```text
+Passing Reads >= required-reads-percent
 
-Developers can run the program without manually creating a new JAR.
+AND
 
-Windows:
-
-```powershell
-.\gradlew.bat run --args="-i testdata/test.fastq --quality --gc"
+Duplicates <= max-duplicate-percent
 ```
 
-macOS/Linux:
+Otherwise the final status is `FAIL`.
 
-```bash
-./gradlew run --args="-i testdata/test.fastq --quality --gc"
-```
+GC percentage and sequence length are not independent status requirements.
 
-## 11. Getting help
+## 10. Help and Version
 
-Show the available command-line options:
+Display built-in help:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar --help
 ```
 
-Invalid arguments or values outside supported ranges result in an error.
+The short form is:
 
-Examples of invalid values:
-
-```text
---end-percent 0
---min-quality-score 94
---min-length 0
+```bash
+java -jar build/libs/seqspectre-all.jar -h
 ```
 
-For information about resolving errors, see the [Troubleshooting Guide](troubleshooting.md).
+PicoCLI also recognizes:
+
+```bash
+java -jar build/libs/seqspectre-all.jar --version
+```
+
+However, a formal release version is not currently configured, so the version output should not be used as the source for the installed Java or Gradle version.
+
+## 11. Developer-Only Option
+
+The code includes a hidden Easter egg:
+
+```text
+--bart-mode
+```
+
+This flag is intentionally omitted from normal PicoCLI help.
+
+When used in a successful analysis, it activates an additional interactive terminal prompt after the QC report has been written.
+
+Example:
+
+```powershell
+java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq --bart-mode
+```
+
+The program asks:
+
+```text
+Is your name Bart Barnard? (yes/no)
+```
+
+If the user answers `yes` or `y`, the program prints a special message.
+
+This option does not affect QC calculations or the TSV report. It is intended as an internal Easter egg rather than a normal quality control feature.
 
 ---
 

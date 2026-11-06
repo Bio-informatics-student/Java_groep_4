@@ -2,42 +2,42 @@
 
 Welcome to the SeqSpectre User Guide!
 
-This guide explains how to use SeqSpectre to analyse FASTQ sequencing data, configure quality control settings and interpret the generated results.
+This guide explains how to analyse FASTQ sequencing data, configure QC settings and interpret the generated results.
 
-No Java programming knowledge is required to use the application.
+No Java programming knowledge is required to use SeqSpectre.
 
-For installation instructions, see the [Installation Guide](installation.md).
+[Home](../README.md) · [Installation](installation.md) · [CLI Commands](commands.md) · [Developer Guide](developer-guide.md) · [Troubleshooting](troubleshooting.md) · [Contact & Support](contact.md)
 
 ---
 
-## 1. What does SeqSpectre do?
+## 1. What is SeqSpectre?
 
-SeqSpectre is a command-line quality control (QC) application for FASTQ sequencing data.
+SeqSpectre is a command-line quality control application for FASTQ sequencing data.
 
-The application examines sequencing reads and reports:
+The application can:
 
-- **Beginning Quality:** Quality of bases at the beginning of reads.
-- **Ending Quality:** Quality of bases at the end of reads.
-- **Duplicates:** Percentage of repeated nucleotide sequences.
-- **GC Percentage:** Percentage of guanine and cytosine bases.
-- **Sequence Length:** Shortest and longest sequencing reads.
-- **Passing Reads:** Percentage of reads meeting the quality requirements.
-- **Final Status:** An overall PASS or FAIL result.
+- Count the total number of sequencing reads.
+- Analyse Phred quality at both ends of reads.
+- Identify exact duplicate sequences.
+- Calculate GC percentage.
+- Determine minimum and maximum read lengths.
+- Filter reads below a specified minimum length.
+- Calculate the percentage of reads passing the quality checks.
+- Assign a final PASS or FAIL status.
+- Generate TSV reports.
 
-These measurements help identify potential quality problems before sequencing data is used for further analysis.
+## 2. Preparing FASTQ input
 
-## 2. Preparing your input
+Supported file extensions:
 
-SeqSpectre accepts the following FASTQ file extensions:
-
-| File extension | Description |
+| Extension | Description |
 |---|---|
-| `.fastq` | Standard FASTQ |
+| `.fastq` | Standard FASTQ file |
 | `.fq` | Alternative FASTQ extension |
 | `.fastq.gz` | Gzip-compressed FASTQ |
-| `.fq.gz` | Gzip-compressed alternative FASTQ |
+| `.fq.gz` | Gzip-compressed FASTQ |
 
-A FASTQ record consists of four lines:
+Each FASTQ record consists of four lines:
 
 ```text
 @read1
@@ -46,123 +46,186 @@ ACGTACGT
 IIIIIIII
 ```
 
-The first line identifies the read, the second contains the nucleotide sequence, the third separates sequence and quality, and the fourth contains Phred+33 encoded quality values.
+These contain:
 
-Each nucleotide must have one corresponding quality character.
+1. A header beginning with `@`.
+2. The nucleotide sequence.
+3. A separator beginning with `+`.
+4. A Phred+33 encoded quality string.
 
-SeqSpectre can analyse one file or multiple FASTQ files located directly inside a directory.
+The sequence and quality string must have equal lengths.
 
-**Important:** FASTQ files in nested subdirectories are not automatically included.
+SeqSpectre accepts one FASTQ file or a directory containing FASTQ files. Directory scanning is not recursive.
 
-## 3. Starting SeqSpectre
+## 3. Starting an analysis
 
-Open a terminal in the SeqSpectre project directory.
+After building the executable JAR, open a terminal in the repository's root directory.
 
-Run a FASTQ analysis with:
-
-```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
-```
-
-On Windows, the equivalent command is:
+On Windows:
 
 ```powershell
 java -jar build\libs\seqspectre-all.jar -i testdata\test.fastq
 ```
 
-The `-i` argument identifies the input file or directory.
+On macOS/Linux:
 
-After processing, SeqSpectre:
+```bash
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
+```
 
-1. Displays the selected QC results in the terminal.
-2. Saves the results in a tab-separated file.
-3. Displays a message identifying the output location.
+The application:
 
-By default, the output file is named `results.tsv`.
+1. Validates the input path and QC settings.
+2. Reads the FASTQ records.
+3. Calculates original read counts and lengths.
+4. Applies optional minimum-length filtering.
+5. Performs the remaining QC analyses.
+6. Prints a report in the terminal.
+7. Saves the report to a TSV file.
 
-## 4. Analysing multiple samples
+By default, the report is saved as `results.tsv`.
 
-To analyse multiple FASTQ files, specify a directory instead of a single file:
+## 4. Analysing a directory
+
+To analyse multiple FASTQ files:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata
 ```
 
-Each detected FASTQ file is analysed separately.
+Each supported FASTQ file directly inside the directory is processed independently.
 
-The resulting TSV report contains one row per processed FASTQ file.
+The generated report contains one row per file.
 
-Other file types are ignored.
+Unsupported files are ignored.
 
-## 5. Choosing your QC settings
+## 5. Default QC settings
 
-SeqSpectre uses default settings when no additional analysis options are provided.
+When no additional options are provided, SeqSpectre uses:
 
-| Setting | Default | Description |
-|---|---|---|
-| Read-end percentage | 10% | Portion of each read end to analyse |
-| Minimum quality score | Q30 | Minimum required Phred score per base |
-| Required passing reads | 80% | Minimum percentage of reads passing both quality checks |
-| Maximum duplicates | 100% | Maximum allowed percentage of duplicate sequences |
-| Minimum length | Not set | Optional minimum read length |
+| Setting | Default |
+|---|---|
+| Read-end percentage | 10% |
+| Minimum Phred score | Q30 |
+| Required passing reads | 80% |
+| Maximum duplicate percentage | 100% |
+| Minimum read length | No filter |
+| Output file | `results.tsv` |
+| Report columns | All available measurements |
 
-The user can modify these values using command-line arguments.
+### Read-end quality
 
-For example:
+SeqSpectre selects a configurable percentage of bases at the beginning and end of each read.
 
-```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 20 --min-quality-score 30
+The number of bases selected at each end is rounded upwards.
+
+For a read containing 16 bases with the default percentage of 10%:
+
+```text
+ceil(16 × 10 / 100) = 2 bases
 ```
 
-This analyses 20% of the bases at each end of every read using a minimum Phred quality score of Q30.
+The first two and last two bases are analysed independently.
 
-### Quality thresholds
+A read passes when at least 90% of the selected bases at both ends individually meet the minimum Phred threshold.
 
-A read passes its quality assessment when at least 90% of the analysed bases at **both** read ends meet the chosen Phred threshold.
+### Required passing reads
 
-For the complete FASTQ file to meet the quality requirement, the percentage of passing reads must be at least the value specified by `--required-reads-percent`.
+The default is:
 
-### Duplicate thresholds
+```text
+--required-reads-percent 80
+```
 
-SeqSpectre detects duplicate sequences through exact nucleotide sequence matching.
+At least 80% of the analysed reads must pass both read-end quality checks for the file to satisfy the quality requirement.
 
-Use:
+### Duplicate threshold
 
-```bash
+The default is:
+
+```text
+--max-duplicate-percent 100
+```
+
+This allows any duplicate percentage between 0% and 100%.
+
+Users can apply a stricter threshold, for example:
+
+```text
 --max-duplicate-percent 20
 ```
 
-to allow no more than 20% duplicate reads.
+## 6. Changing QC settings
 
-The default value of 100% means the duplicate threshold does not normally cause a FAIL result.
-
-### Minimum sequence length
-
-Use:
+Example:
 
 ```bash
---min-length 100
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --end-percent 20 --min-quality-score 30 --required-reads-percent 90 --max-duplicate-percent 20
 ```
 
-to exclude reads shorter than 100 bases from subsequent QC calculations.
+This command:
 
-If all reads are excluded, the analysis stops with an error.
+- Analyses 20% of each read end.
+- Requires bases to meet Q30.
+- Requires at least 90% of reads to pass.
+- Allows at most 20% duplicate reads.
 
-For a complete explanation of every option, including permitted values, see the [CLI Command Reference](commands.md).
+The complete allowed ranges are documented in the [CLI Command Reference](commands.md).
 
-## 6. Selecting which results to display
+## 7. Minimum length filtering
 
-By default, SeqSpectre reports all available QC measurements.
+The `--min-length` option excludes reads shorter than the specified length.
 
-Alternatively, you can select individual categories:
+Example:
 
-| Option | Displayed information |
+```bash
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --min-length 12 --length
+```
+
+When the filter is enabled:
+
+1. SeqSpectre counts all original reads.
+2. It determines the original minimum and maximum read lengths.
+3. It calculates the percentage of reads shorter than the selected minimum.
+4. Reads below the minimum are removed.
+5. Quality, duplicate, GC and passing-read calculations use the remaining reads.
+6. The reported minimum length is recalculated using the remaining reads.
+7. The reported maximum length retains the original maximum.
+
+For example, suppose the original lengths are:
+
+```text
+50, 80, 100, 150
+```
+
+With `--min-length 90`:
+
+```text
+Total Reads: 4
+Reads Below Minimum: 50%
+Minimum Length: 100
+Maximum Length: 150
+```
+
+Only the reads of 100 and 150 bases are used for the subsequent QC calculations.
+
+**Important:** `Total Reads` always represents the original read count before filtering. It does not represent the number of reads remaining after filtering.
+
+If no reads remain, the application stops with an error.
+
+## 8. Selecting report measurements
+
+By default, SeqSpectre displays all available QC measurements.
+
+To display only specific measurements, use one or more of these options:
+
+| Option | Result columns |
 |---|---|
-| `--quality` | Beginning and ending quality |
-| `--duplicates` | Duplicate percentage |
-| `--gc` | GC percentage |
-| `--length` | Minimum and maximum sequence length |
-| `--passing-reads` | Percentage of passing reads |
+| `--quality` | Beginning Quality, Ending Quality |
+| `--duplicates` | Duplicates |
+| `--gc` | GC Percentage |
+| `--length` | Minimum Length, Maximum Length |
+| `--passing-reads` | Passing Reads |
 
 For example:
 
@@ -170,189 +233,168 @@ For example:
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq --gc --duplicates
 ```
 
-Only the requested measurements are included, alongside the sample name, file type and final status.
+The following columns are always present, even when output selection is used:
 
-You can combine several display options.
+- `Sample`
+- `Type`
+- `Total Reads`
+- `Final Status`
 
-**Note:** Selecting fewer columns does not disable the underlying QC calculations or change the final PASS/FAIL criteria.
+If `--min-length` is specified and length statistics are displayed, the report also contains `% Reads Below Minimum Length`.
 
-## 7. Example: Analysing test.fastq
+Display flags only change the visible columns. They do not disable calculations or change the PASS/FAIL criteria.
 
-The repository contains `testdata/test.fastq`, a small FASTQ file containing four sequencing reads.
+## 9. Example: test.fastq
 
-This file can be used to verify that SeqSpectre is working correctly.
+The repository contains:
 
-### Step 1 — Run the analysis
+```text
+testdata/test.fastq
+```
+
+This file contains four FASTQ records, each with a sequence length of 16 bases.
+
+Run:
 
 ```bash
 java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq
 ```
 
-No additional settings are necessary.
+### Expected results
 
-### Step 2 — Open the results
-
-SeqSpectre generates:
-
-```text
-results.tsv
-```
-
-The file contains the following results from an actual execution of SeqSpectre:
+Using the default settings, the current processing and formatting code produces:
 
 | Measurement | Result |
 |---|---|
 | Sample | test.fastq |
 | Type | FASTQ |
-| Beginning Quality | 100.0% |
-| Ending Quality | 100.0% |
-| Duplicates | 0.0% |
+| Total Reads | 4 |
+| Beginning Quality | 100.00% |
+| Ending Quality | 100.00% |
+| Duplicates | 0.00% |
 | GC Percentage | 43.75% |
 | Minimum Length | 16 |
 | Maximum Length | 16 |
-| Passing Reads | 100.0% |
+| Passing Reads | 100.00% |
 | Final Status | PASS |
 
-### Step 3 — Interpret the results
+**Total Reads — 4**
 
-**Beginning Quality — 100.0%**
+The input contains four FASTQ records.
 
-All bases selected at the beginning of the reads meet the minimum quality threshold.
+**Beginning Quality — 100.00%**
 
-**Ending Quality — 100.0%**
+All selected bases at the beginnings of reads meet the default Q30 threshold.
 
-All bases selected at the end of the reads meet the minimum quality threshold.
+**Ending Quality — 100.00%**
 
-**Duplicates — 0.0%**
+All selected bases at the ends of reads meet the default Q30 threshold.
 
-No duplicate nucleotide sequences were detected.
+**Duplicates — 0.00%**
+
+No exact duplicate nucleotide sequences were found.
 
 **GC Percentage — 43.75%**
 
-43.75% of the analysed nucleotides consist of guanine or cytosine.
+43.75% of the sequence characters are G or C.
 
-**Minimum and Maximum Length — 16**
+**Minimum Length — 16**
 
-All four reads contain exactly 16 nucleotides.
+The shortest read contains 16 bases.
 
-**Passing Reads — 100.0%**
+**Maximum Length — 16**
 
-All four reads pass the quality requirements at both ends.
+The longest read also contains 16 bases.
+
+**Passing Reads — 100.00%**
+
+All four reads meet the quality requirements at both ends.
 
 **Final Status — PASS**
 
-The file meets both the minimum passing-read requirement and the maximum duplicate threshold.
+The file meets both the passing-read and duplicate thresholds.
 
-### Understanding the read-end calculation
+The example demonstrates application functionality but is not representative of a full sequencing experiment.
 
-By default, SeqSpectre analyses 10% of each read end.
+## 10. Understanding the output file
 
-For the example file, every read contains 16 nucleotides.
+SeqSpectre generates a TSV file containing a header row and one row per input sample.
 
-```text
-16 × 0.10 = 1.6
-```
-
-SeqSpectre rounds this upwards to two bases.
-
-Therefore, the first two and last two bases of every read are analysed independently.
-
-### Important limitation
-
-This sample contains only four reads. It is suitable for demonstrating the application but is too small to provide a representative assessment of biological sequencing quality.
-
-## 8. Understanding PASS and FAIL
-
-SeqSpectre assigns a final status to each sample.
-
-A sample receives **PASS** when:
-
-- the percentage of passing reads is at least the configured minimum; and
-- the duplicate percentage is no greater than the configured maximum.
-
-For example, suppose a sample produces:
+The complete default report contains:
 
 ```text
-Passing Reads: 85%
-Duplicates: 15%
+Sample
+Type
+Total Reads
+Beginning Quality
+Ending Quality
+Duplicates
+GC Percentage
+Minimum Length
+Maximum Length
+Passing Reads
+Final Status
 ```
 
-Using:
+The values are separated by tab characters, not line breaks; the list above shows the column names for readability.
+
+Percentage values are formatted to two decimal places using a decimal point, for example:
 
 ```text
---required-reads-percent 80
---max-duplicate-percent 20
+100.00%
+43.75%
+0.00%
 ```
 
-the final status is `PASS`.
+When a relevant numerical percentage is unavailable, the writer can display `N/A`.
 
-If the passing-read percentage decreases below 80%, or the duplicate percentage increases above 20%, the final status is `FAIL`.
-
-The final status reflects SeqSpectre's configured QC requirements. It does not guarantee that the sequencing data is suitable for every downstream biological analysis.
-
-## 9. Understanding the output file
-
-The output is saved as a tab-separated values file (`.tsv`).
-
-A TSV file contains one header row followed by one row per analysed sample. Columns are separated using tab characters.
-
-It can be opened using spreadsheet applications, text editors or data-analysis software such as R.
-
-The following columns are always present:
-
-- `Sample`
-- `Type`
-- `Final Status`
-
-Additional columns depend on the selected display options.
-
-### Changing the output location
-
-Use `-o` or `--output`:
+### Custom output location
 
 ```bash
-java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o output/my_results.tsv
+java -jar build/libs/seqspectre-all.jar -i testdata/test.fastq -o reports/qc_results.tsv
 ```
 
-The specified output file is created after successful processing.
+SeqSpectre attempts to create the parent directory when necessary.
 
-If a file already exists at that location, it is overwritten.
+An existing file at the same output path will be overwritten.
 
-## 10. Common mistakes
+TSV files can be opened using text editors, spreadsheet software or data-analysis applications such as R.
 
-### The input file cannot be found
+## 11. PASS and FAIL
 
-Check that the path is correct and that the file exists.
+A file receives `PASS` only when:
 
-Relative paths are interpreted from the current terminal working directory.
+```text
+Passing Reads >= required-reads-percent
+AND
+Duplicates <= max-duplicate-percent
+```
 
-### No FASTQ files were found
+Otherwise, the final status is `FAIL`.
 
-Make sure the specified input file has a supported FASTQ extension, or that the selected directory directly contains supported FASTQ files.
+GC percentage and sequence length are not independent PASS/FAIL conditions.
 
-### Invalid quality settings
+The selected minimum length filters reads but does not directly add another status condition.
 
-Check that the chosen percentages and Phred thresholds are within the supported ranges.
+## 12. Help and common problems
 
-### Invalid FASTQ format
+Display command-line help:
 
-Check that each read has four lines, begins with a valid header, and contains equal-length sequence and quality strings.
+```bash
+java -jar build/libs/seqspectre-all.jar --help
+```
 
-### No reads remain after filtering
+If an error occurs:
 
-If the minimum length is higher than every read length, the application cannot continue the QC analysis.
+- Confirm that the FASTQ path exists.
+- Verify that the input format is supported.
+- Check that quality strings and nucleotide sequences have equal lengths.
+- Check numerical argument ranges.
+- Ensure the output location is writable.
+- Check whether minimum-length filtering removes all reads.
 
-Try a lower `--min-length` or use a dataset containing longer reads.
-
-For more troubleshooting information, see the [Troubleshooting Guide](troubleshooting.md).
+See [Troubleshooting](troubleshooting.md) for detailed solutions.
 
 ---
-
-## Further documentation
-
-- [Installation Guide](installation.md)
-- [CLI Command Reference](commands.md)
-- [Developer Guide](developer-guide.md)
-- [Troubleshooting](troubleshooting.md)
 
 [Back to SeqSpectre Home](../README.md)
